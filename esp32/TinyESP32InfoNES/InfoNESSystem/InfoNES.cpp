@@ -786,7 +786,9 @@ int InfoNES_HSync()
 
       // pAPU Sound function in V-Sync
       if ( !APU_Mute )
+      {
         InfoNES_pAPUVsync();
+      }
 
       // A mapper function in V-Sync
       MapperVSync();

@@ -32,6 +32,37 @@
 
 #include <Arduino.h>
 
+#ifdef use_lib_esp32_dac
+ #include <driver/dac.h>
+
+ //No necesita rtc_io.reg ni soc.h, compila PLATFORMIO,Arduino IDE y ArduinoDROID
+ //DAC 1 GPIO25
+ #define DR_REG_RTCIO_BASE 0x3ff48400
+ #define RTC_IO_PAD_DAC1_REG (DR_REG_RTCIO_BASE + 0x84)
+ #define RTC_IO_PDAC1_DAC 0x000000FF
+ #define RTC_IO_PDAC1_DAC_S 19
+
+ //DAC 2 GPIO26
+ #define RTC_IO_PAD_DAC2_REG (DR_REG_RTCIO_BASE + 0x88)
+ #define RTC_IO_PDAC2_DAC 0x000000FF
+ #define RTC_IO_PDAC2_DAC_S 19
+
+
+ #define SENS_SAR_DAC_CTRL2_REG (DR_REG_SENS_BASE + 0x009c)
+ #define SENS_DAC_CW_EN1_M  (BIT(24))
+ #define SENS_DAC_CW_EN2_M  (BIT(25))
+
+ //8 Khz
+ hw_timer_t *gb_timerSound = NULL;
+ volatile unsigned char gb_spk_data= 0x80;
+ volatile unsigned char gb_spk_data_before= 0x80;
+
+ void IRAM_ATTR onTimerSoundDAC(void); 
+#endif
+
+
+unsigned char gb_use_video_mode_pal=1; //Modo 50 hz
+
 #ifdef use_lib_log_serial
  unsigned char gb_use_debug=1;
 #else 
@@ -86,8 +117,9 @@ unsigned char gb_setup_end=0;
 
 #ifdef use_lib_esp32_dac
  const int AMPLITUDE = 28000;
- const int SAMPLE_RATE = 44100;
- //const int SAMPLE_RATE = 8000;
+ //const int SAMPLE_RATE = 44100;
+ const int SAMPLE_RATE = 8000;
+ //const int SAMPLE_RATE = 4000;
  //SDL_AudioSpec want;
  //SDL_AudioSpec have;
  unsigned int sample_nr = 0;
@@ -109,8 +141,8 @@ unsigned char gb_setup_end=0;
  
  //unsigned int gb_cola_vol_mixer[480][3];
  //unsigned int gb_cola_max_ch[480][3];
- unsigned int gb_vol_now[3]={0,0,0};
- unsigned int gb_max_ch_now[3]={0,0,0};
+ unsigned int gb_vol_now[4]={0,0,0,0};
+ unsigned int gb_max_ch_now[4]={0,0,0,0};
 #endif
 
 
@@ -310,6 +342,22 @@ void setup()
  #ifdef use_lib_psram
   psramInit();
  #endif 
+
+ #ifdef use_lib_esp32_dac
+  dac_output_enable(DAC_CHANNEL_1);
+  //dac_output_voltage(DAC_CHANNEL_1, 0x7f); //Evita llamar CLEAR_PERI_REG_MASK
+  CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
+  SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, 0x7f, RTC_IO_PDAC1_DAC_S); 
+
+  gb_timerSound= timerBegin(0, 80, true); 
+  timerAttachInterrupt(gb_timerSound, &onTimerSoundDAC, true);
+
+  timerAlarmWrite(gb_timerSound, 125, true); //1000000 1 segundo  125 es 8000 hz
+  //timerAlarmWrite(gb_timerSound, 250, true); //1000000 1 segundo  250 es 4000 hz
+
+  Serial.printf("Init Sound Interrupt\r\n");
+  timerAlarmEnable(gb_timerSound);
+ #endif
 
  //szRomName= (char *)ps_malloc(256);
  //szSaveName= (char *)ps_malloc(256);
@@ -1444,9 +1492,9 @@ void SDL_InitAudio()
   */
 }
 
- volatile unsigned int gb_cur_cont_ch[3]={0,0,0};
- volatile unsigned char gb_flipflop_ch[3]={0,0,0};
- volatile unsigned int gb_max_cont_ch[3]={1,1,1};
+ volatile unsigned int gb_cur_cont_ch[4]={0,0,0,0};
+ volatile unsigned char gb_flipflop_ch[4]={0,0,0,0};
+ volatile unsigned int gb_max_cont_ch[4]={1,1,1,1};
 
 //******************************************************************************
 /*JJ pendiente
@@ -1458,6 +1506,61 @@ void SDL_audio_callback(void *user_data, Uint8 *raw_buffer, int bytes)
 //SONIDO ESP32 DAC SDL END
 
 
+#ifdef use_lib_esp32_dac
+ void IRAM_ATTR onTimerSoundDAC()
+ {  
+  //Para DAC   
+  //int i0,i1,i2,i3,iSum;
+  int iSum;
+
+  if (gb_spk_data != gb_spk_data_before)
+  {
+   //dac_output_voltage(DAC_CHANNEL_1, gb_spk_data_r);
+    
+   //CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
+   SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, gb_spk_data, RTC_IO_PDAC1_DAC_S);   //dac_output
+    
+   //    //En ESP32S2 es base + 0x0120 y en esp32 base+0x009C sens_reg.h y soc.h
+   //    #define SENS_SAR_DAC_CTRL2_REG          (DR_REG_SENS_BASE + 0x0120)
+   //    #define SENS_DAC_CW_EN1_M  (BIT(24))
+   //    //CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
+   //    SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, gb_spk_data, RTC_IO_PDAC1_DAC_S);   //dac_output              
+
+   gb_spk_data_before= gb_spk_data;
+  }
+
+  //Mezclador
+  iSum= 0;
+  for (unsigned char ch=0;ch<3;ch++)
+  {
+   gb_cur_cont_ch[ch]++;
+   if (gb_cur_cont_ch[ch]>=(gb_max_cont_ch[ch]-1))
+   {
+    gb_cur_cont_ch[ch]=0;
+    
+    gb_flipflop_ch[ch]++;
+    gb_flipflop_ch[ch]= (gb_flipflop_ch[ch] & 0x01);
+   }
+
+   if ((gbVolMixer_now[ch]!=0) && (gbVol_canal_now[ch]!=0))
+   {
+    iSum+= (gb_flipflop_ch[ch]==1)?32:-32;
+   }  
+  }
+
+
+
+  //iSum= i0+i1+i2+i3;
+  if (iSum>127) {iSum=127;}
+  else
+  {
+   if(iSum<-127) {iSum=-127;}
+  }
+  
+  gb_spk_data= (iSum+0x80)>>1;
+
+ }
+#endif
 
 
 

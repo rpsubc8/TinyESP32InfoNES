@@ -1169,7 +1169,7 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   //}
 
   //gbFrecMixer_now[0]= (unsigned short int)auxFrec;
-  gb_max_cont_ch[0]= SAMPLE_RATE/auxFrec/2;
+  gb_max_cont_ch[0]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
     
   //gb_max_ch_now[0]= SAMPLE_RATE/auxFrec/2;
   
@@ -1216,7 +1216,7 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   //}  
   
   //gbFrecMixer_now[1]= (unsigned short int)auxFrec;
-  gb_max_cont_ch[1]= SAMPLE_RATE/auxFrec/2;
+  gb_max_cont_ch[1]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
   
   //gb_vol_now[1]= (unsigned short int)auxFrec;
   //gb_max_ch_now[1]= SAMPLE_RATE/auxFrec/2;    
@@ -1266,7 +1266,7 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   //}  
   
   //gbFrecMixer_now[2]= (unsigned short int)auxFrec;
-  gb_max_cont_ch[2]= SAMPLE_RATE/auxFrec/2;
+  gb_max_cont_ch[2]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
   //gbVolMixer_now[2]= (gbFrecMixer_now[2] < 100)? 0: 2;
   
   //gb_vol_now[2]= (unsigned short int)auxFrec;

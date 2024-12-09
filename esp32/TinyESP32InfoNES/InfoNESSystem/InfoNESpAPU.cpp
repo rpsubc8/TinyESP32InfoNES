@@ -15,6 +15,7 @@
 #include "K6502rw.h"
 #include "InfoNESSystem.h"
 #include "InfoNESpAPU.h"
+#include <Arduino.h> //millis
 
 
 //-------------------------------------------------------------------
@@ -986,19 +987,34 @@ void ApuRenderingWave5(void)
 //                                                                   
 //===================================================================
 
-unsigned int auxFrec=100;
+//unsigned int auxFrec=100;
+unsigned int gb_tiempo_vsync_antes=0;
+unsigned int gb_tiempo_vsync_ahora=0;
+
 void InfoNES_pAPUVsync(void)
 {
-  ApuRenderingWave1();
-  ApuRenderingWave2();
-  ApuRenderingWave3();
-  ApuRenderingWave4();
-  ApuRenderingWave5();
+  //pendiente ApuRenderingWave1();
+  //pendiente ApuRenderingWave2();
+  //pendiente ApuRenderingWave3();
+  //pendiente ApuRenderingWave4();
+  //pendiente ApuRenderingWave5();
     
   ApuCtrl = ApuCtrlNew;
     
+  //Serial.printf("vsync\r\n"); 
+
   if (gb_sinfreno==0)
   {
+   gb_tiempo_vsync_ahora= micros();
+   unsigned int durFrame= (gb_use_video_mode_pal==1)? 20000: 16000;
+   unsigned int aux= durFrame - (gb_tiempo_vsync_ahora - gb_tiempo_vsync_antes);   
+   //Serial.printf("%d %d %d\r\n",gb_tiempo_vsync_antes,gb_tiempo_vsync_ahora,aux);
+   gb_tiempo_vsync_antes= gb_tiempo_vsync_ahora;
+   if ((aux>0)&&(aux<durFrame))
+   {
+     delayMicroseconds(aux);
+   }   
+
    #ifdef use_lib_esp32_dac
     //for (unsigned char i=0;i<10;i++)
     //{

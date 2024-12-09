@@ -28,8 +28,8 @@
  #ifdef use_lib_esp32_dac
   //extern unsigned int gb_cola_vol_mixer[480][3];
   //extern unsigned int gb_cola_max_ch[480][3];
-  extern unsigned int gb_vol_now[3];
-  extern unsigned int gb_max_ch_now[3];
+  extern unsigned int gb_vol_now[4];
+  extern unsigned int gb_max_ch_now[4];
   
   extern unsigned char gb_frec_canal1_low;
   extern unsigned char gb_frec_canal1_high;
@@ -40,9 +40,9 @@
   extern unsigned char gb_frec_canal4_low;
   extern unsigned char gb_frec_canal4_high;   
   
-  extern volatile unsigned int gb_cur_cont_ch[3];  
-  extern volatile unsigned int gb_max_cont_ch[3];
-  extern volatile unsigned char gb_flipflop_ch[3];
+  extern volatile unsigned int gb_cur_cont_ch[4];  
+  extern volatile unsigned int gb_max_cont_ch[4];
+  extern volatile unsigned char gb_flipflop_ch[4];
   
   extern volatile unsigned char gbVol_canal_now[4];
   extern volatile unsigned char gbVolMixer_now[4];
@@ -230,6 +230,8 @@ extern void (*MapperRenderScreen)( unsigned char byMode );
  #endif
 
  extern unsigned char gb_use_debug;
+
+ extern unsigned char gb_use_video_mode_pal;
 
 #endif
 
