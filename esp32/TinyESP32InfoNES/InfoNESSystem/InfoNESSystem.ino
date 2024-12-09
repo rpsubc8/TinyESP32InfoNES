@@ -319,7 +319,11 @@ void setup()
   Serial.printf("DRAM %d\r\n", ESP.getFreeHeap());
  #endif
 
- WorkFrame= (unsigned char *)malloc((NES_DISP_WIDTH * NES_DISP_HEIGHT)); //61440
+ #ifdef use_lib_not_use_framebuffer
+ #else
+  WorkFrame= (unsigned char *)malloc((NES_DISP_WIDTH * NES_DISP_HEIGHT)); //61440
+ #endif
+
  Serial.printf("WORKFRAME %d\r\n", ESP.getFreeHeap());
  ChrBuf= (unsigned char *)malloc((256 * 2 * 8 * 8)); //32768
  Serial.printf("ChrBuf %d\r\n", ESP.getFreeHeap()); 
@@ -671,7 +675,11 @@ void loop()
  {
 
   Serial.printf("BEGIN\n");
-  Serial.printf("Size WorkFrame:%d\n",sizeof(WorkFrame));
+  #ifdef use_lib_not_use_framebuffer
+   Serial.printf("Size WorkFrameOneLine:%d\n",sizeof(WorkFrameOneLine));
+  #else
+   Serial.printf("Size WorkFrame:%d\n",sizeof(WorkFrame));
+  #endif 
 //  #ifdef use_lib_vga_esp32
 //   PreparaBitluniVGA();
 //  #endif   
@@ -1151,6 +1159,8 @@ void InfoNES_LoadFrame()
   }
   gb_vga_before= gb_vga_cur;
 
+ #ifdef use_lib_not_use_framebuffer
+ #else
   //pl=(BYTE *)screen->pixels;
   pw = WorkFrame;
   for(unsigned char y=0; y<NES_DISP_HEIGHT; y++)
@@ -1171,6 +1181,8 @@ void InfoNES_LoadFrame()
    //pw+=(0x100-NES_DISP_WIDTH);
   }
 
+ #endif
+ 
 //  bitluni_dump_vga();
 //  SDL_Flip(gb_screen);  
 }

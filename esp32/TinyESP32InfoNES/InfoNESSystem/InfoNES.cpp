@@ -168,7 +168,11 @@ unsigned short int FrameCnt;
 //#endif
 
 #ifdef use_lib_WorkFrame8
- unsigned char *WorkFrame; //unsigned char WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+ #ifdef use_lib_not_use_framebuffer
+  unsigned char WorkFrameOneLine[256]; //Solo una linea
+ #else
+  unsigned char *WorkFrame; //unsigned char WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+ #endif 
 #else
  unsigned short int WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
 #endif
@@ -848,7 +852,11 @@ void InfoNES_DrawLine()
   MapperRenderScreen( 1 );
 
   // Pointer to the render position
-  pPoint = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
+  #ifdef use_lib_not_use_framebuffer
+   pPoint = WorkFrameOneLine;
+  #else
+   pPoint = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
+  #endif 
 
   // Clear a scanline if screen is off
   if ( !( PPU_R1 & R1_SHOW_SCR ) )
@@ -856,7 +864,11 @@ void InfoNES_DrawLine()
     //#ifdef use_lib_palette_ttgo
     // InfoNES_MemorySet( pPoint, 0x3F, NES_DISP_WIDTH << 1 ); //Borrar linea el 0 es gris
     //#else
-     InfoNES_MemorySet( pPoint, 0, NES_DISP_WIDTH << 1 );
+    #ifdef use_lib_WorkFrame8
+     memset( pPoint, 0, 256); //256 bytes byte
+    #else
+     InfoNES_MemorySet( pPoint, 0, NES_DISP_WIDTH << 1 ); //512 bytes word
+    #endif 
     //#endif 
   }
   else
@@ -1002,8 +1014,17 @@ void InfoNES_DrawLine()
        unsigned short int *pPointTop;
       #endif 
 
-      pPointTop = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
-      InfoNES_MemorySet( pPointTop, 0, 8 << 1 );
+      #ifdef use_lib_not_use_framebuffer
+       pPointTop = WorkFrameOneLine;
+      #else
+       pPointTop = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
+      #endif
+
+      #ifdef use_lib_WorkFrame8
+       memset( pPointTop, 0, 8 );
+      #else
+       InfoNES_MemorySet( pPointTop, 0, 8 << 1 );
+      #endif 
     }
 
     //-------------------------------------------------------------------
@@ -1018,8 +1039,17 @@ void InfoNES_DrawLine()
        unsigned short int *pPointTop;
       #endif 
 
-      pPointTop = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
-      InfoNES_MemorySet( pPointTop, 0, NES_DISP_WIDTH << 1 );
+      #ifdef use_lib_not_use_framebuffer
+       pPointTop = WorkFrameOneLine;
+      #else
+       pPointTop = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
+      #endif 
+
+      #ifdef use_lib_WorkFrame8
+       memset( pPointTop, 0, 256 );
+      #else
+       InfoNES_MemorySet( pPointTop, 0, NES_DISP_WIDTH << 1 );
+      #endif
     }  
   }
 
@@ -1143,13 +1173,40 @@ void InfoNES_DrawLine()
        unsigned short int *pPointTop;
       #endif
 
-      pPointTop = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
-      InfoNES_MemorySet( pPointTop, 0, 8 << 1 );
+      #ifdef use_lib_not_use_framebuffer
+       pPointTop = WorkFrameOneLine;
+      #else
+       pPointTop = &WorkFrame[ PPU_Scanline * NES_DISP_WIDTH ];
+      #endif
+
+      #ifdef use_lib_WorkFrame8
+       memset( pPointTop, 0, 8 );
+      #else
+       InfoNES_MemorySet( pPointTop, 0, 8 << 1 );
+      #endif
     }
 
     if ( nSprCnt >= 8 )
       PPU_R2 |= R2_MAX_SP;  // Set a flag of maximum sprites on scanline
   }
+
+
+  #ifdef use_lib_not_use_framebuffer   
+   unsigned char a0,a1,a2,a3;
+   unsigned int a32;
+   unsigned char *ptr= WorkFrameOneLine;
+
+   for (unsigned char x=0;x<64;x++) //256 div 4
+   {    
+    a0= gb_const_colorNormal[*ptr++];
+    a1= gb_const_colorNormal[*ptr++];
+    a2= gb_const_colorNormal[*ptr++];
+    a3= gb_const_colorNormal[*ptr++];
+    a32= a2 | (a3<<8) | (a0<<16) | (a1<<24); //ESP32
+
+    gb_buffer_vga32[PPU_Scanline][x]= a32; 
+   }
+  #endif
 }
 
 //===================================================================

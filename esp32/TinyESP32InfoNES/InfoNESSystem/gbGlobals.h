@@ -132,7 +132,11 @@
  
  
  #ifdef use_lib_WorkFrame8
-  extern unsigned char *WorkFrame; //extern unsigned char WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+  #ifdef use_lib_not_use_framebuffer
+   extern unsigned char WorkFrameOneLine[256]; //Solo una linea
+  #else
+   extern unsigned char *WorkFrame; //extern unsigned char WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+  #endif 
  #else
   extern unsigned short int WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
  #endif 

@@ -32,8 +32,12 @@
  #define use_lib_tinybitluni_fast
 
  #define use_lib_vga_esp32
+ 
  //Usar 61440 bytes en lugar de 122880
  #define use_lib_WorkFrame8
+
+ //No usar framebuffer 61440 bytes (ahorro memoria)
+ #define use_lib_not_use_framebuffer
  
  //usar roms de memoria
  #define use_lib_rom_memory
