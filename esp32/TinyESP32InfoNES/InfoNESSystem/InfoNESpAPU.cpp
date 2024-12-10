@@ -1003,6 +1003,7 @@ void InfoNES_pAPUVsync(void)
     
   //Serial.printf("vsync\r\n"); 
 
+
   if (gb_sinfreno==0)
   {
    gb_tiempo_vsync_ahora= micros();
@@ -1011,9 +1012,25 @@ void InfoNES_pAPUVsync(void)
    //Serial.printf("%d %d %d\r\n",gb_tiempo_vsync_antes,gb_tiempo_vsync_ahora,aux);
    gb_tiempo_vsync_antes= gb_tiempo_vsync_ahora;
    if ((aux>0)&&(aux<durFrame))
-   {
-     delayMicroseconds(aux);
+   {     
+     unsigned int inicio= gb_tiempo_vsync_ahora= micros();
+     while ((gb_tiempo_vsync_ahora-inicio)<aux)
+     {
+      gb_tiempo_vsync_ahora= micros();
+      #ifdef use_lib_sound_fabgl
+       jj_snd_pop();
+      #endif
+     }
+     //delayMicroseconds(aux);
    }   
+
+   #ifdef use_lib_sound_fabgl
+    for (unsigned char c=0;c<40;c++)
+    {
+     jj_snd_state_tail[c][0]=0;
+    }
+    tiempo_snd_inicio= millis();
+   #endif   
 
    #ifdef use_lib_esp32_dac
     //for (unsigned char i=0;i<10;i++)

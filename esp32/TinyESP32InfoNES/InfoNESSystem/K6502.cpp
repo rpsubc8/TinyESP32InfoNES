@@ -1152,6 +1152,15 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   gb_frec_canal1_low = data;
   //printf("1 LOW:%d\n",gb_frec_canal1_low); fflush(stdout);
   //return RAM[address];
+  
+  aux= gb_frec_canal1_high;
+  aux= aux<<8;
+  aux= aux | gb_frec_canal1_low;
+  auxFrec= (1789773/ (16*(aux+1)));
+  gbFrecMixer_now[0]= auxFrec;
+
+  gb_max_cont_ch[0]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
+
   return;
  }
 
@@ -1162,7 +1171,10 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   aux= gb_frec_canal1_high;
   aux= aux<<8;
   aux= aux | gb_frec_canal1_low;
-  auxFrec= (unsigned int)(1.789773 * 1000000 / (16*(aux+1)));
+  //auxFrec= (unsigned int)((1.789773 * 1000000) / (16*(aux+1)));
+  auxFrec= (1789773/ (16*(aux+1)));
+
+  gbFrecMixer_now[0]= auxFrec;
   //if (auxFrec>1000)
   //{
   // auxFrec= 1000;
@@ -1200,6 +1212,14 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
  if (address == 0x4006)
  {
   gb_frec_canal2_low = data;
+
+  aux= gb_frec_canal2_high;
+  aux= aux<<8;
+  aux= aux | gb_frec_canal2_low;
+  auxFrec= (1789773/ (16*(aux+1)));
+  gbFrecMixer_now[1]= auxFrec;  
+
+  gb_max_cont_ch[1]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
   //return RAM[address];
   return;
  }
@@ -1210,7 +1230,10 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   aux= gb_frec_canal2_high;
   aux= aux<<8;
   aux= aux | gb_frec_canal2_low;
-  auxFrec= (unsigned int)(1.789773 * 1000000 / (16*(aux+1)));  
+  //auxFrec= (unsigned int)((1.789773 * 1000000) / (16*(aux+1)));  
+  auxFrec= (1789773/ (16*(aux+1)));
+
+  gbFrecMixer_now[1]= auxFrec;
   //if (auxFrec>1000){
   // auxFrec= 1000;
   //}  
@@ -1250,6 +1273,14 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
  if (address == 0x400A)
  {
   gb_frec_canal3_low = data;
+
+  aux= gb_frec_canal3_high;
+  aux= aux<<8;
+  aux= aux | gb_frec_canal3_low;
+  auxFrec= (1789773/ (16*(aux+1)));
+  gbFrecMixer_now[2]= auxFrec;
+
+  gb_max_cont_ch[2]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
   //return RAM[address];
   return;
  }
@@ -1260,7 +1291,10 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   aux= gb_frec_canal3_high;
   aux= aux<<8;
   aux= aux | gb_frec_canal3_low;
-  auxFrec= (unsigned int)(1.789773 * 1000000 / (16*(aux+1)));  
+  //auxFrec= (unsigned int)((1.789773 * 1000000) / (16*(aux+1)));  
+  auxFrec= (1789773/ (16*(aux+1)));
+
+  gbFrecMixer_now[2]= auxFrec;
   //if (auxFrec>1000){
   // auxFrec= 1000;
   //}  
@@ -1293,6 +1327,15 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
  if (address == 0x400E)
  {
   gb_frec_canal4_low = data;
+
+  aux= gb_frec_canal4_high;
+  aux= aux<<8;
+  aux= aux | gb_frec_canal4_low;
+  auxFrec= (1789773/ (16*(aux+1)));
+  gbFrecMixer_now[3]= auxFrec;    
+
+  gb_max_cont_ch[3]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
+
   return;             
  }
  
@@ -1302,8 +1345,11 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
   aux= gb_frec_canal4_high;
   aux= aux<<8;
   aux= aux | gb_frec_canal4_low;
-  auxFrec= (unsigned int)(1.789773 * 1000000 / (16*(aux+1)));  
-  gb_max_cont_ch[3]= SAMPLE_RATE/auxFrec/2;  
+  //auxFrec= (unsigned int)(1.789773 * 1000000 / (16*(aux+1)));  
+  auxFrec= (1789773/ (16*(aux+1)));
+  gbFrecMixer_now[3]= auxFrec;
+
+  gb_max_cont_ch[3]= (auxFrec==0)? 1 : SAMPLE_RATE/auxFrec/2;
   #ifdef use_lib_debug_apu_memwrite
    printf("Canal4 Dato:%d Frec:%d cont:%d\n",aux,auxFrec,gb_max_cont_ch[3]);
    fflush(stdout);

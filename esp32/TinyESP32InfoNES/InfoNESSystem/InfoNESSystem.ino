@@ -32,32 +32,66 @@
 
 #include <Arduino.h>
 
-#ifdef use_lib_esp32_dac
- #include <driver/dac.h>
+#ifdef use_lib_sound_fabgl
+#else
+ #ifdef use_lib_esp32_dac
+  #include <driver/dac.h>
 
- //No necesita rtc_io.reg ni soc.h, compila PLATFORMIO,Arduino IDE y ArduinoDROID
- //DAC 1 GPIO25
- #define DR_REG_RTCIO_BASE 0x3ff48400
- #define RTC_IO_PAD_DAC1_REG (DR_REG_RTCIO_BASE + 0x84)
- #define RTC_IO_PDAC1_DAC 0x000000FF
- #define RTC_IO_PDAC1_DAC_S 19
+  //No necesita rtc_io.reg ni soc.h, compila PLATFORMIO,Arduino IDE y ArduinoDROID
+  //DAC 1 GPIO25
+  #define DR_REG_RTCIO_BASE 0x3ff48400
+  #define RTC_IO_PAD_DAC1_REG (DR_REG_RTCIO_BASE + 0x84)
+  #define RTC_IO_PDAC1_DAC 0x000000FF
+  #define RTC_IO_PDAC1_DAC_S 19
 
- //DAC 2 GPIO26
- #define RTC_IO_PAD_DAC2_REG (DR_REG_RTCIO_BASE + 0x88)
- #define RTC_IO_PDAC2_DAC 0x000000FF
- #define RTC_IO_PDAC2_DAC_S 19
+  //DAC 2 GPIO26
+  #define RTC_IO_PAD_DAC2_REG (DR_REG_RTCIO_BASE + 0x88)
+  #define RTC_IO_PDAC2_DAC 0x000000FF
+  #define RTC_IO_PDAC2_DAC_S 19
 
 
- #define SENS_SAR_DAC_CTRL2_REG (DR_REG_SENS_BASE + 0x009c)
- #define SENS_DAC_CW_EN1_M  (BIT(24))
- #define SENS_DAC_CW_EN2_M  (BIT(25))
+  #define SENS_SAR_DAC_CTRL2_REG (DR_REG_SENS_BASE + 0x009c)
+  #define SENS_DAC_CW_EN1_M  (BIT(24))
+  #define SENS_DAC_CW_EN2_M  (BIT(25))
 
- //8 Khz
- hw_timer_t *gb_timerSound = NULL;
- volatile unsigned char gb_spk_data= 0x80;
- volatile unsigned char gb_spk_data_before= 0x80;
+  //8 Khz
+  hw_timer_t *gb_timerSound = NULL;
+  volatile unsigned char gb_spk_data= 0x80;
+  volatile unsigned char gb_spk_data_before= 0x80;
 
- void IRAM_ATTR onTimerSoundDAC(void); 
+  void IRAM_ATTR onTimerSoundDAC(void); 
+ #endif
+#endif
+
+
+#ifdef use_lib_sound_fabgl
+ #include "fabgl.h" //Para fabgl
+ #include "fabutils.h" //Para fabgl
+ SoundGenerator soundGenerator;
+ //SineWaveformGenerator gb_sineArray[4];
+ SquareWaveformGenerator gb_sineArray[4];
+ 
+ unsigned char gbVolMixer_before[4]={0,0,0,0};
+ unsigned short int gbFrecMixer_before[4]={0,0,0,0};
+ volatile unsigned char gbVolMixer_now[4]={0,0,0,0};
+ volatile  unsigned int gbFrecMixer_now[4]={0,0,0,0}; 
+ unsigned char gb_silence_all_channels=1; 
+ unsigned char gbShiftLeftVolumen=0; //Maximo volumen shift left 2
+ unsigned char gb_mute_sound=0;
+ 
+ static unsigned int gb_sdl_time_sound_before;
+  
+ unsigned int jj_snd_frec_tail[40][4];
+ unsigned int jj_snd_vol_tail[40][4];
+ unsigned int jj_snd_state_tail[40][4];
+ 
+ unsigned int gbVolMixer_now_fabgl[4]={0,0,0,0};
+ unsigned int gbVolMixer_before_fabgl[4]={0,0,0,0};
+ unsigned int gbFrecMixer_now_fabgl[4]={0,0,0,0};
+ unsigned int gbFrecMixer_before_fabgl[4]={0,0,0,0};
+ //void sound_cycleFabgl(void);
+ //void jj_mixpsg(void);
+ //void SilenceAllChannels(void); 
 #endif
 
 
@@ -115,21 +149,9 @@ unsigned char gb_setup_end=0;
  const unsigned int *gb_ptrVideo_cur= VgaMode_vga_mode_360x200; //VgaMode_vga_mode_320x200;
  unsigned char gb_vga_videomode_cur= video_mode_vga320x240x60hz_bitluni; //0 //video_mode_vga320x200x70hz_bitluni; //2
 
-#ifdef use_lib_esp32_dac
- const int AMPLITUDE = 28000;
- //const int SAMPLE_RATE = 44100;
+#ifdef use_lib_sound_fabgl
  const int SAMPLE_RATE = 8000;
- //const int SAMPLE_RATE = 4000;
- //SDL_AudioSpec want;
- //SDL_AudioSpec have;
- unsigned int sample_nr = 0;
  volatile unsigned char gbVol_canal_now[4]={0,0,0,0};
- volatile unsigned char gbVolMixer_now[4]={0,0,0,0};
- volatile unsigned int gbFrecMixer_now[4]={0,0,0,0}; 
- unsigned char gb_silence_all_channels=1; 
- //void SDL_audio_callback(void *user_data, Uint8 *raw_buffer, int bytes); 
- //void SDL_InitAudio(void);
- 
  unsigned char gb_frec_canal1_low=0;
  unsigned char gb_frec_canal1_high=0;
  unsigned char gb_frec_canal2_low=0;
@@ -137,13 +159,38 @@ unsigned char gb_setup_end=0;
  unsigned char gb_frec_canal3_low=0;
  unsigned char gb_frec_canal3_high=0; 
  unsigned char gb_frec_canal4_low=0;
- unsigned char gb_frec_canal4_high=0;  
+ unsigned char gb_frec_canal4_high=0;   
+#else
+ #ifdef use_lib_esp32_dac
+  const int AMPLITUDE = 28000;
+  //const int SAMPLE_RATE = 44100;
+  const int SAMPLE_RATE = 8000;
+  //const int SAMPLE_RATE = 4000;
+  //SDL_AudioSpec want;
+  //SDL_AudioSpec have;
+  unsigned int sample_nr = 0;
+  volatile unsigned char gbVol_canal_now[4]={0,0,0,0};
+  volatile unsigned char gbVolMixer_now[4]={0,0,0,0};
+  volatile unsigned int gbFrecMixer_now[4]={0,0,0,0}; 
+  unsigned char gb_silence_all_channels=1; 
+  //void SDL_audio_callback(void *user_data, Uint8 *raw_buffer, int bytes); 
+  //void SDL_InitAudio(void);
  
- //unsigned int gb_cola_vol_mixer[480][3];
- //unsigned int gb_cola_max_ch[480][3];
- unsigned int gb_vol_now[4]={0,0,0,0};
- unsigned int gb_max_ch_now[4]={0,0,0,0};
-#endif
+  unsigned char gb_frec_canal1_low=0;
+  unsigned char gb_frec_canal1_high=0;
+  unsigned char gb_frec_canal2_low=0;
+  unsigned char gb_frec_canal2_high=0;
+  unsigned char gb_frec_canal3_low=0;
+  unsigned char gb_frec_canal3_high=0; 
+  unsigned char gb_frec_canal4_low=0;
+  unsigned char gb_frec_canal4_high=0;  
+ 
+  //unsigned int gb_cola_vol_mixer[480][3];
+  //unsigned int gb_cola_max_ch[480][3];
+  unsigned int gb_vol_now[4]={0,0,0,0};
+  unsigned int gb_max_ch_now[4]={0,0,0,0};
+ #endif
+#endif 
 
 
 
@@ -343,21 +390,24 @@ void setup()
   psramInit();
  #endif 
 
- #ifdef use_lib_esp32_dac
-  dac_output_enable(DAC_CHANNEL_1);
-  //dac_output_voltage(DAC_CHANNEL_1, 0x7f); //Evita llamar CLEAR_PERI_REG_MASK
-  CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
-  SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, 0x7f, RTC_IO_PDAC1_DAC_S); 
+ #ifdef use_lib_sound_fabgl
+ #else
+  #ifdef use_lib_esp32_dac
+   dac_output_enable(DAC_CHANNEL_1);
+   //dac_output_voltage(DAC_CHANNEL_1, 0x7f); //Evita llamar CLEAR_PERI_REG_MASK
+   CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
+   SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, 0x7f, RTC_IO_PDAC1_DAC_S); 
 
-  gb_timerSound= timerBegin(0, 80, true); 
-  timerAttachInterrupt(gb_timerSound, &onTimerSoundDAC, true);
+   gb_timerSound= timerBegin(0, 80, true); 
+   timerAttachInterrupt(gb_timerSound, &onTimerSoundDAC, true);
 
-  timerAlarmWrite(gb_timerSound, 125, true); //1000000 1 segundo  125 es 8000 hz
-  //timerAlarmWrite(gb_timerSound, 250, true); //1000000 1 segundo  250 es 4000 hz
+   timerAlarmWrite(gb_timerSound, 125, true); //1000000 1 segundo  125 es 8000 hz
+   //timerAlarmWrite(gb_timerSound, 250, true); //1000000 1 segundo  250 es 4000 hz
 
-  Serial.printf("Init Sound Interrupt\r\n");
-  timerAlarmEnable(gb_timerSound);
- #endif
+   Serial.printf("Init Sound Interrupt\r\n");
+   timerAlarmEnable(gb_timerSound);
+  #endif
+ #endif 
 
  //szRomName= (char *)ps_malloc(256);
  //szSaveName= (char *)ps_malloc(256);
@@ -414,6 +464,24 @@ void setup()
  PrepareColorsBitluniVGA();
 
  Serial.printf("VGA %d\r\n", ESP.getFreeHeap());
+
+
+ #ifdef use_lib_sound_fabgl
+   for (unsigned char i=0;i<4;i++)
+  {
+   soundGenerator.attach(&gb_sineArray[i]);
+   gb_sineArray[i].enable(true);
+   gb_sineArray[i].setFrequency(0);
+  }
+  soundGenerator.play(true);
+ 
+  for (unsigned char i=0;i<40;i++)
+  {
+   jj_snd_state_tail[i][0]= 0;  
+  }
+  Serial.printf("fabgl sound %d\r\n", ESP.getFreeHeap());
+ #endif
+
 
  gb_setup_end= 1;
  //if(psramInit())
@@ -1505,62 +1573,107 @@ void SDL_audio_callback(void *user_data, Uint8 *raw_buffer, int bytes)
 #endif
 //SONIDO ESP32 DAC SDL END
 
-
-#ifdef use_lib_esp32_dac
- void IRAM_ATTR onTimerSoundDAC()
+#ifdef use_lib_sound_fabgl
+ void SilenceAllChannels()
  {  
-  //Para DAC   
-  //int i0,i1,i2,i3,iSum;
-  int iSum;
-
-  if (gb_spk_data != gb_spk_data_before)
+  for (unsigned char i=0;i<4;i++)  
   {
-   //dac_output_voltage(DAC_CHANNEL_1, gb_spk_data_r);
-    
-   //CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
-   SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, gb_spk_data, RTC_IO_PDAC1_DAC_S);   //dac_output
-    
-   //    //En ESP32S2 es base + 0x0120 y en esp32 base+0x009C sens_reg.h y soc.h
-   //    #define SENS_SAR_DAC_CTRL2_REG          (DR_REG_SENS_BASE + 0x0120)
-   //    #define SENS_DAC_CW_EN1_M  (BIT(24))
-   //    //CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
-   //    SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, gb_spk_data, RTC_IO_PDAC1_DAC_S);   //dac_output              
+   gb_sineArray[i].setFrequency(0);
+   gb_sineArray[i].setVolume(0);
+   gbVolMixer_before_fabgl[i] = gbVolMixer_now_fabgl[i] = 0;
+   gbFrecMixer_before_fabgl[i] = gbFrecMixer_now_fabgl[i] = 0;
+  }  
+ }
 
-   gb_spk_data_before= gb_spk_data;
-  }
-
-  //Mezclador
-  iSum= 0;
-  for (unsigned char ch=0;ch<3;ch++)
-  {
-   gb_cur_cont_ch[ch]++;
-   if (gb_cur_cont_ch[ch]>=(gb_max_cont_ch[ch]-1))
+ void sound_cycleFabgl()
+ {  
+  //AY8912
+  //for (unsigned char i=0;i<3;i++)
+  for (unsigned char i=0;i<4;i++)
+  {   
+   if (gbVolMixer_now_fabgl[i] != gbVolMixer_before_fabgl[i])
    {
-    gb_cur_cont_ch[ch]=0;
+    //gb_sineArray[i].setVolume((gbVolMixer_now[i]<<2));    
+    /*
+    switch (gbShiftLeftVolumen)
+    {
+      case 0: gb_sineArray[i].setVolume((gbVolMixer_now[i]<<2)); break;
+      //case 0: gb_sineArray[i].setVolume((gbVolMixer_now[i]<<4)); break;
+      case 1: gb_sineArray[i].setVolume((gbVolMixer_now[i]<<1)); break;
+      case 2: gb_sineArray[i].setVolume((gbVolMixer_now[i])); break;
+      case 3: gb_sineArray[i].setVolume((gbVolMixer_now[i]>>1)); break;
+      case 4: gb_sineArray[i].setVolume((gbVolMixer_now[i]>>2)); break;
+      default: gb_sineArray[i].setVolume((gbVolMixer_now[i]<<2)); break;
+    }
+    */
+    gb_sineArray[i].setVolume((gbVolMixer_now_fabgl[i]==1)? 100 : 0);
+
+    gbVolMixer_before_fabgl[i] = gbVolMixer_now_fabgl[i];
+   }
+   if (gbFrecMixer_now_fabgl[i] != gbFrecMixer_before_fabgl[i])
+   {
+    gb_sineArray[i].setFrequency(gbFrecMixer_now_fabgl[i]);
+    gbFrecMixer_before_fabgl[i] = gbFrecMixer_now_fabgl[i];
+   }
+  }
+ } 
+#else
+ #ifdef use_lib_esp32_dac
+  void IRAM_ATTR onTimerSoundDAC()
+  {  
+   //Para DAC   
+   //int i0,i1,i2,i3,iSum;
+   int iSum;
+
+   if (gb_spk_data != gb_spk_data_before)
+   {
+    //dac_output_voltage(DAC_CHANNEL_1, gb_spk_data_r);
     
-    gb_flipflop_ch[ch]++;
-    gb_flipflop_ch[ch]= (gb_flipflop_ch[ch] & 0x01);
+    //CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
+    SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, gb_spk_data, RTC_IO_PDAC1_DAC_S);   //dac_output
+    
+    //    //En ESP32S2 es base + 0x0120 y en esp32 base+0x009C sens_reg.h y soc.h
+    //    #define SENS_SAR_DAC_CTRL2_REG          (DR_REG_SENS_BASE + 0x0120)
+    //    #define SENS_DAC_CW_EN1_M  (BIT(24))
+    //    //CLEAR_PERI_REG_MASK(SENS_SAR_DAC_CTRL2_REG, SENS_DAC_CW_EN1_M);
+    //    SET_PERI_REG_BITS(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, gb_spk_data, RTC_IO_PDAC1_DAC_S);   //dac_output              
+
+    gb_spk_data_before= gb_spk_data;
    }
 
-   if ((gbVolMixer_now[ch]!=0) && (gbVol_canal_now[ch]!=0))
+   //Mezclador
+   iSum= 0;
+   for (unsigned char ch=0;ch<4;ch++)
    {
-    iSum+= (gb_flipflop_ch[ch]==1)?32:-32;
-   }  
-  }
+    gb_cur_cont_ch[ch]++;
+    if (gb_cur_cont_ch[ch]>=(gb_max_cont_ch[ch]-1))
+    {
+     gb_cur_cont_ch[ch]=0;
+     
+     gb_flipflop_ch[ch]++;
+     gb_flipflop_ch[ch]= (gb_flipflop_ch[ch] & 0x01);
+    }
+
+    if ((gbVolMixer_now[ch]!=0) && (gbVol_canal_now[ch]!=0))
+    {
+     iSum+= (gb_flipflop_ch[ch]==1)?32:-32;
+    }  
+   }
 
 
 
-  //iSum= i0+i1+i2+i3;
-  if (iSum>127) {iSum=127;}
-  else
-  {
-   if(iSum<-127) {iSum=-127;}
-  }
+   //iSum= i0+i1+i2+i3;
+   if (iSum>127) {iSum=127;}
+   else
+   {
+    if(iSum<-127) {iSum=-127;}
+   }
   
-  gb_spk_data= (iSum+0x80)>>1;
+   gb_spk_data= (iSum+0x80);
 
- }
-#endif
+  } 
+ #endif
+#endif 
 
 
 

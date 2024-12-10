@@ -45,8 +45,15 @@
  //Usa 64 colores paleta ttgo vga32
  #define use_lib_palette_ttgo
  
- //Usa osciladores
+ //Usa osciladores DAC directo
  #define use_lib_esp32_dac
+ 
+ //Prueba fabgl (no usar)
+ //#define use_lib_sound_fabgl
+ #ifdef use_lib_sound_fabgl
+  #define use_lib_sound_ay8912
+ #endif 
+
  
  //Log sonido
  //#define use_lib_debug_apu_memwrite

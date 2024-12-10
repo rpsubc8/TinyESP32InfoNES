@@ -68,4 +68,9 @@ void InfoNES_SoundOutput(int samples, unsigned char *wave1, unsigned char *wave2
 /* Print system message */
 void InfoNES_MessageBox( char *pszMsg, ... );
 
+#ifdef use_lib_sound_fabgl
+ void sound_cycleFabgl(void);
+ void SilenceAllChannels(void);
+#endif
+
 #endif /* !InfoNES_SYSTEM_H_INCLUDED */

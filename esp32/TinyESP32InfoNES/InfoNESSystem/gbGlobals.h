@@ -12,6 +12,18 @@
  //extern SDL_Surface *gb_screen;
  //extern SDL_Color gb_colors[256];
 
+ #ifdef use_lib_sound_fabgl
+  extern unsigned int jj_snd_frec_tail[40][4];
+  extern unsigned int jj_snd_vol_tail[40][4];
+  extern unsigned int jj_snd_state_tail[40][4];
+  extern unsigned int tiempo_snd_inicio;
+  
+  extern unsigned int gbVolMixer_now_fabgl[4];
+  extern unsigned int gbVolMixer_before_fabgl[4];
+  extern unsigned int gbFrecMixer_now_fabgl[4];
+  extern unsigned int gbFrecMixer_before_fabgl[4];
+ #endif
+
  extern unsigned char gb_setup_end;
  
  extern unsigned char ** gb_buffer_vga;

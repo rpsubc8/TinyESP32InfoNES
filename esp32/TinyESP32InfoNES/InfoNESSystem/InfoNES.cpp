@@ -694,6 +694,42 @@ void InfoNES_Cycle()
  */
 #endif
 
+
+#ifdef use_lib_sound_fabgl
+ void jj_snd_push()
+ {
+  //20 ms - 240 scanlines
+  //1 ms  - 12
+  unsigned int aux = PPU_Scanline/12;  
+  for (unsigned i=0;i<4;i++)
+  {
+   jj_snd_frec_tail[aux][i]= gbFrecMixer_now[i];
+   jj_snd_vol_tail[aux][i]= gbVol_canal_now[i];
+   jj_snd_state_tail[aux][i]= 1;
+  }
+ }
+
+ //********************************************
+ unsigned int tiempo_snd_inicio=0;
+ unsigned int tiempo_snd_ahora=0;
+ void jj_snd_pop()
+ {
+  tiempo_snd_ahora= millis();
+  unsigned int auxId= (tiempo_snd_ahora-tiempo_snd_inicio);
+  if (auxId<20)
+  {
+   for (unsigned i=0;i<4;i++)
+   {
+    if (jj_snd_state_tail[auxId][i]!=0)
+    {
+     gbFrecMixer_now_fabgl[i]= jj_snd_frec_tail[auxId][i];
+     gbVolMixer_now_fabgl[i]= jj_snd_vol_tail[auxId][i];
+    }
+   }
+  }
+ }
+#endif
+
 /*===================================================================*/
 /*                                                                   */
 /*              InfoNES_HSync() : A function in H-Sync               */
@@ -718,6 +754,11 @@ int InfoNES_HSync()
      if ((gb_fps_cur & 0x01)==0)
      {
       InfoNES_DrawLine();
+
+      #ifdef use_lib_sound_fabgl
+       jj_snd_push();
+       sound_cycleFabgl();
+      #endif 
      }
     #else
      InfoNES_DrawLine();

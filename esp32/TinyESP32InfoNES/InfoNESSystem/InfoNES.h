@@ -321,4 +321,8 @@ void InfoNES_GetSprHitY();
 /* Develop character data */
 void InfoNES_SetupChr();
 
+#ifdef use_lib_sound_fabgl
+ void jj_snd_pop(void);
+#endif 
+
 #endif /* !InfoNES_H_INCLUDED */
