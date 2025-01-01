@@ -988,8 +988,8 @@ void ApuRenderingWave5(void)
 //===================================================================
 
 //unsigned int auxFrec=100;
-unsigned int gb_tiempo_vsync_antes=0;
-unsigned int gb_tiempo_vsync_ahora=0;
+//unsigned int gb_tiempo_vsync_antes=0;
+//unsigned int gb_tiempo_vsync_ahora=0;
 
 void InfoNES_pAPUVsync(void)
 {
@@ -1004,15 +1004,17 @@ void InfoNES_pAPUVsync(void)
   //Serial.printf("vsync\r\n"); 
 
 
-  if (gb_sinfreno==0)
+  /*
+  if (gb_sinfreno==0)  
   {
+    
    gb_tiempo_vsync_ahora= micros();
    unsigned int durFrame= (gb_use_video_mode_pal==1)? 20000: 16000;
    unsigned int aux= durFrame - (gb_tiempo_vsync_ahora - gb_tiempo_vsync_antes);   
    //Serial.printf("%d %d %d\r\n",gb_tiempo_vsync_antes,gb_tiempo_vsync_ahora,aux);
-   gb_tiempo_vsync_antes= gb_tiempo_vsync_ahora;
+   //gb_tiempo_vsync_antes= gb_tiempo_vsync_ahora;
    if ((aux>0)&&(aux<durFrame))
-   {     
+   {          
      unsigned int inicio= gb_tiempo_vsync_ahora= micros();
      while ((gb_tiempo_vsync_ahora-inicio)<aux)
      {
@@ -1023,6 +1025,8 @@ void InfoNES_pAPUVsync(void)
      }
      //delayMicroseconds(aux);
    }   
+
+   gb_tiempo_vsync_antes= gb_tiempo_vsync_ahora= micros();
 
    #ifdef use_lib_sound_fabgl
     for (unsigned char c=0;c<40;c++)
@@ -1102,6 +1106,7 @@ void InfoNES_pAPUVsync(void)
  		        wave_buffers[3], wave_buffers[4]);
    #endif		       
   }
+  */
 
   entertime = g_wPassedClocks;
   cur_event = 0;

@@ -130,7 +130,8 @@
  #ifdef use_lib_WorkFrame8
   extern unsigned char *PalTable; //extern unsigned char PalTable[];
  #else
-  extern unsigned short int PalTable[];
+  //extern unsigned short int PalTable[];
+  extern unsigned short int *PalTable;
  #endif 
  
  extern unsigned char APU_Reg[];
@@ -150,7 +151,11 @@
    extern unsigned char *WorkFrame; //extern unsigned char WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
   #endif 
  #else
-  extern unsigned short int WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+  #ifdef use_lib_not_use_framebuffer
+   extern unsigned short int WorkFrameOneLine[256]; //Solo una linea
+  #else
+   extern unsigned short int WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+  #endif 
  #endif 
  
  extern unsigned char MapperNo; //Mapper No
@@ -244,6 +249,54 @@ extern void (*MapperRenderScreen)( unsigned char byMode );
  extern unsigned char gb_use_debug;
 
  extern unsigned char gb_use_video_mode_pal;
+
+
+ 
+ extern volatile unsigned int gbDutty_canal_now[4];
+ extern volatile unsigned int gb_max_cont_pos_ch[4];
+ extern volatile unsigned int gb_max_cont_neg_ch[4]; 
+ extern volatile unsigned int gb_triangle_inc_ch;
+ extern unsigned char gbRuidoEnv;
+ extern unsigned char gbPulso0Env;
+ extern unsigned char gbPulso1Env; 
+ extern volatile unsigned int gb_triangle_value;
+ extern volatile unsigned int gb_cont_triangulo;
+ 
+ extern unsigned char gb_use_Pulso0Env;
+ extern unsigned char gb_use_Pulso1Env;
+ extern unsigned char gb_use_RuidoEnv;
+ extern unsigned char gb_use_dmc_deltaSigma;
+
+ extern unsigned int gb_latch_inc_triangle;//1 canal triangulo
+ extern unsigned int gb_latch_vol_pulse[4];//2 canales pulso volumen 
+ extern unsigned char gb_latch_vol_mix[4]; //4 canales de mezcla   
+ extern unsigned int gb_latch_vol_triangle;//1 canal triangulo volumen
+ extern unsigned int gb_latch_freq_pulse[4];//2 canales pulso frecuencia
+ extern unsigned int gb_latch_pos_max_pulse[4];//2 canales pulso positivo
+ extern unsigned int gb_latch_neg_max_pulse[4];//2 canales pulso negativo 
+ extern unsigned int gb_latch_freq_triangle;//1 canal triangulo frecuencia
+ extern unsigned int gb_latch_max_triangle;//1 canal triangulo 
+ extern unsigned int gb_dmc_rate;
+ extern signed char gb_dmc_sample[8000];
+ extern volatile unsigned int gb_dmc_sample_len;
+ extern unsigned int gb_dmc_addr;
+ extern volatile unsigned int gb_dmc_sample_cur; 
+
+ extern unsigned int gb_cola_id1ms_write_cur;
+ extern unsigned int gb_cola_id1ms_read_cur;
+ extern unsigned int gb_cola_vol_pulse[40][2];//2 canales pulso volumen
+ extern unsigned int gb_cola_vol_triangle[40];//1 canal triangulo volumen
+ extern unsigned int gb_cola_vol_noise[40];
+ extern unsigned int gb_cola_pos_max_noise[40];
+ extern unsigned int gb_cola_neg_max_noise[40]; 
+ extern unsigned int gb_cola_pos_max[40][4]; //2 canales pulso positivo
+ extern unsigned int gb_cola_neg_max[40][4]; //2 canales pulso negativo 
+ extern unsigned int gb_cola_max_triangle[40]; //un canal triangulo
+ extern unsigned int gb_cola_inc_triangle[40]; 
+ extern unsigned int gb_latch_vol_noise; //1 canal ruido 
+ extern unsigned int gb_cola_vol_dmc[40]; 
+ extern unsigned int gb_latch_vol_dmc; 
+ extern unsigned char gb_cola_vol_mixer[40][4]; 
 
 #endif
 

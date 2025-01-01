@@ -1121,8 +1121,639 @@ static inline unsigned char K6502_ReadIY(){ unsigned short int wA0, wA1; wA0 = K
 
 
 #ifdef use_lib_esp32_dac
+ //Noise Frequency Lookup Table NTSC                                     
+ unsigned int ApuNoiseFreqNTSC[16]=
+ {
+     4,    8,   16,   32,   64,   96,  128,  160,
+   202,  254,  380,  508,  762, 1016, 2034, 4068
+ };
+
+ //Noise Frequency Lookup Table PAL
+ unsigned int ApuNoiseFreqPAL[16]=
+ {
+     4,    8,   14,   30,   60,   88,  118,   148,
+   188,  236,  354,  472,  708,  944, 1890,  3778
+ };
+
+void jj_recalcula_freq_dutty(unsigned char idCanal,unsigned int auxFrec, unsigned int dutty)
+{
+ unsigned int durPos=0;
+ unsigned int durNeg=0;
+ 
+ switch(dutty)
+ {
+  case 0: //12.5 percent
+   durPos= SAMPLE_RATE/auxFrec/8;
+   durNeg= (SAMPLE_RATE/auxFrec/2) + (SAMPLE_RATE/auxFrec/8);
+   break;
+ 
+  case 1: //25 percent
+   durPos= SAMPLE_RATE/auxFrec/4;
+   durNeg= (SAMPLE_RATE/auxFrec/2) + (SAMPLE_RATE/auxFrec/4);
+   break; 
+   
+  case 2: //50 percent
+   durPos= SAMPLE_RATE/auxFrec/2;
+   durNeg= durPos;
+   break; 
+   
+  case 3: //25 percent negative 
+   durPos= (SAMPLE_RATE/auxFrec/2) + (SAMPLE_RATE/auxFrec/4);
+   durNeg= SAMPLE_RATE/auxFrec/4;
+   break;
+ }
+  
+ //gb_max_cont_pos_ch[idCanal]= durPos; //Antes era asi
+ //gb_max_cont_neg_ch[idCanal]= durNeg; //Antes era asi
+ 
+ if (idCanal==2)
+ {//Triangulo  
+  //gb_triangle_inc_ch= (durPos==0)? 1: (durPos/15); //Cada cuanto sube 1 //Antes era asi
+  //printf("Triangle:frec:%d durpos:%d inc:%d\n",auxFrec, durPos, gb_triangle_inc_ch); fflush(stdout);
+ } 
+ 
+ //LATCH
+ switch (idCanal) 
+ {
+  case 0: case 1: 
+   gb_latch_freq_pulse[idCanal]= auxFrec;
+   gb_latch_pos_max_pulse[idCanal]= durPos;
+   gb_latch_pos_max_pulse[idCanal]= durNeg;
+   break;
+   
+  case 2:         
+   gb_latch_freq_triangle= auxFrec;
+   gb_latch_max_triangle= durPos;
+   gb_latch_inc_triangle= (durPos==0)? 1: (durPos/15); //gb_latch_inc_triangle= gb_triangle_inc_ch; //Antes era asi
+   break;       
+
+  case 3: //Ruido
+   gb_latch_pos_max_pulse[3]= durPos;
+   gb_latch_neg_max_pulse[3]= durNeg; //Seria el mismo 50 50 por ciento
+   //printf("RUIDO!!! p:%d n:%d\n",durPos,durNeg); fflush(stdout);   
+ }
+}
+
+//********************************************************************
+void jj_proc_canal_vol(unsigned char idCanal, unsigned char data)
+{//DDLC NNNN   Duty, loop envelope/disable length counter, constant volume, envelope period/volume
+ unsigned char env, auxloop, auxDuty, auxDur, auxC; //Canal 0 y 1 ondas cuadradas
+
+ env= ((data>>4)&0x01);
+ auxloop= ((data>>5)&0x01);
+ auxDuty= ((data>>6)&0x03);
+ auxC= ((data>>4)&0x01);
+  
+ //Duty 	Output waveform
+ //0 	0 1 0 0 0 0 0 0 (12.5%)
+ //1 	0 1 1 0 0 0 0 0 (25%)
+ //2 	0 1 1 1 1 0 0 0 (50%)
+ //3 	1 0 0 1 1 1 1 1 (25% negated) 
+ 
+ //gbVolMixer_now[0]= (data & 0x0F)>>3;
+ //gbVolMixer_now[0]= ((data & 0x0F) == 0)?0:1;
+ //gbVol_canal_now[0]= ((data & 0x0F) == 0)?0:1;
+ 
+ 
+ //gbVol_canal_now[idCanal]= (data & 0x0F);
+ gbDutty_canal_now[idCanal]= auxDuty;
+ 
+ if (auxC==0)
+ {//Envolvente
+  gb_latch_vol_pulse[idCanal]= 15; //gbVol_canal_now[idCanal]= 15; //Antes era asi
+  if (idCanal==0) {gbPulso0Env=1;}
+  if (idCanal==1) {gbPulso1Env=1;}
+ }
+ else
+ {
+  gb_latch_vol_pulse[idCanal]= (data & 0x0F); //gbVol_canal_now[idCanal]= (data & 0x0F); //Antes era asi
+  if (idCanal==0) {gbPulso0Env=0;}
+  if (idCanal==1) {gbPulso1Env=0;}
+ }
+ 
+ 
+/*
+ //gb_latch_vol_pulse[idCanal]= (data & 0x0F); //Antes era asi
+ if (auxC==0)
+ {//Envolvente
+  gb_latch_vol_pulse[idCanal]= 15; //gbVol_canal_now[idCanal]= 15; //Antes era asi
+  if (idCanal==0) {gbPulso0Env=1;}
+  if (idCanal==1) {gbPulso1Env=1;}
+ }
+ else
+ {
+  gb_latch_vol_pulse[idCanal]= (data & 0x0F); //gbVol_canal_now[idCanal]= (data & 0x0F); //Antes era asi
+  if (idCanal==0) {gbPulso0Env=0;}
+  if (idCanal==1) {gbPulso1Env=0;}
+ } 
+ */
+  
+// #ifdef use_lib_debug_apu_memwrite
+//  printf("Cuadrado:%d vol:%d vol:%d env:%d loop:%d duty:%02X C:%d",idCanal,data,gbVol_canal_now[idCanal],env,auxloop,auxDuty, auxC);
+//  printf (" l:%d f:%d\n",PPU_Scanline,gb_fps_cur);
+//  fflush(stdout);
+// #endif
+  
+ //return RAM[address];
+}
+
+//********************************************************************************
+void jj_proc_canal_freq(unsigned char idCanal, unsigned char isHigh, unsigned char data)
+{//Freq low high canal 0 y 1 cuadrado
+ //TTTT TTTT    Low  0x4002
+ //LLLL LTTT    High 0x4003
+ unsigned int aux,auxDur,auxFrec;
+ 
+ if (isHigh==0)
+ {
+  if (idCanal==0)
+  {
+   gb_frec_canal1_low = data;
+  }
+  else
+  {
+   gb_frec_canal2_low = data;
+  }
+ }
+ else
+ {
+  if (idCanal==0)
+  {
+   gb_frec_canal1_high = (data & 0x07);
+   auxDur= ((data>>3)&&0x1F);
+  }
+  else
+  {
+   gb_frec_canal2_high = (data & 0x07);
+   auxDur= ((data>>3)&&0x1F);      
+  }
+  //printf("Canal%d: data:%d dur:%d\n",idCanal, data, auxDur); fflush(stdout);
+ }
+  
+ aux= (idCanal==0)? gb_frec_canal1_high: gb_frec_canal2_high;
+ aux= aux<<8;
+ aux= (idCanal==0)? (aux | gb_frec_canal1_low) : (aux | gb_frec_canal2_low);
+ if (gb_use_video_mode_pal==1)
+ {
+  auxFrec= (unsigned int)(1.662607 * 1000000 / (16*(aux+1)));  
+ }
+ else
+ {
+  auxFrec= (unsigned int)(1.789773 * 1000000 / (16*(aux+1)));  
+ }
+
+ //gb_max_cont_ch[0]= SAMPLE_RATE/auxFrec/2;
+ if (auxFrec!=0)
+ {
+  jj_recalcula_freq_dutty(idCanal, auxFrec, gbDutty_canal_now[idCanal]);      
+ }
+ 
+ 
+ //Envolvente
+ if (gbPulso0Env==1)
+ {//Reseteo la envolvente
+  //if (gbVol_canal_now[0]==0)
+  {
+   gb_latch_vol_pulse[0]= 15; //gbVol_canal_now[0]= 15; //Antes era asi
+  }
+ }
+ else
+ {
+  //gbVol_canal_now[0]= gb_latch_vol_pulse[0];
+ }
+ 
+ if (gbPulso1Env==1)
+ {//Reseteo la envolvente
+  //if (gbVol_canal_now[1]==0)
+  {
+    gb_latch_vol_pulse[1]= 15; //gbVol_canal_now[1]= 15; //Antes era asi
+  }
+ }  
+ else
+ {
+  //gbVol_canal_now[1]= gb_latch_vol_pulse[1];      
+ }
+   
+   
+ //printf("Cuadrado:%d: data:%d dr:%d fq:%d",idCanal, data, auxDur,auxFrec);
+ //printf (" l:%d f:%d\n",PPU_Scanline,gb_fps_cur);
+ //fflush(stdout);   
+     
+ //return RAM[address];
+}
+
+//******************************************************************
+void jj_proc_triangle_vol(unsigned char data)
+{
+ //NO HACEMOS NADA
+ //Se puede silenciar canal triangulo escbiendo 0x80 en 0x4008
+  gb_latch_vol_triangle= (data & 0x0F); //gbVol_canal_now[2]= (data & 0x0F); //Antes era asi
+ if (data==0x80)
+ {
+  gb_latch_vol_triangle= 0; //gbVol_canal_now[2]= 0; //Antes era asi
+ }  
+ 
+
+ //LATCH
+ ////gb_latch_vol_triangle= (data & 0x0F);  //Antes era asi
+ //if (data==0x80) //Antes era asi
+ //{//Antes era asi
+ // gb_latch_vol_triangle= 0;//Antes era asi
+ //}//Antes era asi
+               
+ //gbVolMixer_now[2]= data & 0x0F;
+ //gbVolMixer_now[2]= ((data & 0x01) == 0x01)? 2: 0;
+ //gbVolMixer_now[2]= ((data & 0x01) == 0x01)? 1: 0;
+ //gbVol_canal_now[2]= ((data & 0x01) == 0x01)? 15: 0;
+ //gbVolMixer_now[2]= ((data & 0x0F) == 0)?0:15;
+  
+ #ifdef use_lib_debug_apu_memwrite
+  printf("Triangulo vol:%d vol:%d\n",data,gbVol_canal_now[2]);
+  printf (" l:%d f:%d\n",PPU_Scanline,gb_fps_cur);
+  fflush(stdout);
+ #endif  
+  
+ //return RAM[address]; 
+}
+
+//******************************************************************
+void jj_proc_triangle_freq(unsigned char isHigh,unsigned char data)
+{
+ unsigned int aux,auxDur,auxFrec;
+      
+ if (isHigh==0)
+ {
+  gb_frec_canal3_low = data;
+ }
+ else
+ {
+  gb_frec_canal3_high = data & 0x07;
+ }
+
+ aux= gb_frec_canal3_high;
+ aux= aux<<8;
+ aux= aux | gb_frec_canal3_low;
+
+ //printf("aux:%d %d\n",aux,(aux-1)); fflush(stdout);
+  
+ if (gb_use_video_mode_pal==1)
+ {
+  //auxFrec= (auxFrec==0)?1:(unsigned int)(1.662607 * 1000000 / (16*(aux+1)));
+  //revisar division 0
+  if (aux==0)
+   auxFrec=0;
+  else
+   auxFrec= (unsigned int)(1.662607 * 1000000 / (32*(aux-1)));  
+   //auxFrec= (auxFrec==0)?1:(unsigned int)(1.662607 * 1000000 / (32*(aux-1)));  
+ }
+ else
+ {
+  //auxFrec= (auxFrec==0)?1:(unsigned int)(1.789773 * 1000000 / (16*(aux+1)));  
+  if (aux==0)
+   auxFrec=0;
+  else
+   auxFrec= (unsigned int)(1.789773 * 1000000 / (32*(aux-1)));  
+   //auxFrec= (auxFrec==0)?1:(unsigned int)(1.789773 * 1000000 / (32*(aux-1)));  
+ }
+ //gb_max_cont_ch[2]= SAMPLE_RATE/auxFrec/2;    
+ if (auxFrec!=0)
+ {
+  jj_recalcula_freq_dutty(2, auxFrec, 2); //50 percent  
+ }
+ //gbVol_canal_now[2]= ((auxFrec==0) || (aux<2))?0: 15;
+ if (auxFrec==0)
+ {//Silencio solo si la frecuencia es 0
+  gb_latch_vol_triangle= 0; //gbVol_canal_now[2]= 0; //Antes era asi
+ }
+  
+ //return RAM[address];
+}
+
+
+//*****************************************************************
+void jj_proc_noise_vol(unsigned char data)
+{//--LC VVVV  0x400C
+ unsigned char auxloop, auxC; //Canal 0 y 1 ondas cuadradas
+
+ //env= ((data>>4)&0x01);
+ auxloop= ((data>>5)&0x01);
+ //auxDuty= ((data>>6)&0x03);
+ auxC= ((data>>4)&0x01);
+    
+ if (auxC==0)
+ {//Envolvente
+  gb_latch_vol_noise= 15; //gbVol_canal_now[3]= 15; //Antes era asi
+  gbRuidoEnv=1;    
+ }
+ else
+ {
+  gb_latch_vol_noise= (data & 0x0F); //gbVol_canal_now[3]= (data & 0x0F); //Antes era asi
+  gbRuidoEnv=0;
+ }
+ //gb_latch_vol_pulse[idCanal]= (data & 0x0F);     
+ 
+ //printf("Noise vol:%d %d cte:%d",data,gbVol_canal_now[3],auxC);
+ //printf (" l:%d f:%d\n",PPU_Scanline,gb_fps_cur);
+ //fflush(stdout);
+}
+
+//******************************************************************
+void jj_proc_noise_freq(unsigned char data)
+{//ruido registro 400E
+ unsigned int idFreq,auxFreqId,auxFrec,auxFrecFinal;
+      
+ idFreq= (data & 0x0F); 
+ auxFreqId= (gb_use_video_mode_pal==1)? ApuNoiseFreqPAL[idFreq]: ApuNoiseFreqNTSC[idFreq];
+ auxFrec  = (39375000/44) / auxFreqId;
+ //No periodico dividir 32767
+ //Periodico dividir 93
+ 
+ auxFrecFinal= auxFrec/93;
+ auxFrecFinal= auxFrecFinal/4;
+ if (auxFrecFinal!=0)
+ {
+  jj_recalcula_freq_dutty(3, auxFrecFinal, 2); //50 percent  
+ }
+ //gbVol_canal_now[2]= ((auxFrec==0) || (aux<2))?0: 15;
+ if (auxFrecFinal==0)
+ {//Silencio solo si la frecuencia es 0
+  gb_latch_vol_noise= 0; //gbVol_canal_now[3]= 0; //Antes era asi
+ }
+ else
+ {
+  if (gbRuidoEnv==1)
+  {//Reseteo la envolvente
+   gb_latch_vol_noise= 15; //gbVol_canal_now[3]= 15;  //Antes era asi
+  }
+ }
+ 
+ 
+ //printf("RUIDO:data:%d id:%d freqId:%d freq:%d Noperiod:%d Period:%d",data,idFreq,auxFreqId,auxFrecFinal, (auxFrec/32767), (auxFrec/93) );
+ //printf (" l:%d f:%d\n",PPU_Scanline,gb_fps_cur);
+ //fflush(stdout);
+}
+
+
+//******************************************************************
+void jj_proc_dmc_rate(unsigned char data)
+{//IL--.RRRR
+ //Rate   $0   $1   $2   $3   $4   $5   $6   $7   $8   $9   $A   $B   $C   $D   $E   $F
+ //      ------------------------------------------------------------------------------
+ //NTSC  428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54
+ //PAL   398, 354, 316, 298, 276, 236, 210, 198, 176, 148, 132, 118,  98,  78,  66,  50
+ unsigned char gb_rate_ntsc[16]={
+  428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54
+ };
+
+ unsigned char gb_rate_pal[16]={
+  398, 354, 316, 298, 276, 236, 210, 198, 176, 148, 132, 118,  98,  78,  66,  50
+ }; 
+
+ unsigned int auxRate,auxId;
+
+ auxId= (data & 0x0F);
+ auxRate= (gb_use_video_mode_pal==1)? (unsigned int)(1.662607 * 1000000/gb_rate_pal[auxId]) : (unsigned int)(1.789773 * 1000000/gb_rate_ntsc[auxId]);
+ 
+ gb_dmc_rate= auxRate;
+ 
+// printf("DMC rate:data:%d id:%d rate:%d\n",data,auxId,auxRate); fflush(stdout);
+}
+
+//******************************************************************
+void jj_proc_dmc_load(unsigned char data)
+{
+// printf("DMC load:data:%d\n",data); fflush(stdout);
+}
+
+//******************************************************************
+void jj_proc_dmc_addr(unsigned char data)
+{
+ unsigned int sampleAddr=  (unsigned int)0xC000 + (((unsigned int)data) * 64);
+ 
+ gb_dmc_addr= sampleAddr;
+// printf("DMC addr:data:%d addr:%08X\n",data,sampleAddr); fflush(stdout);
+}
+
+//******************************************************************
+void DumpDMC(unsigned int addr,unsigned int len)
+{
+/*  
+ unsigned char aux;
+ int valorDeltaSigma=0;
+ unsigned char cont16=0;
+ unsigned char aByte;
+ unsigned char bit;
+ //int auxValor;
+ 
+ printf("\nDump DMC BEGIN addr:%08X len:%d\n",addr,len);
+ for (unsigned int i=0;i<len;i++)
+ {
+  aux= K6502_Read(addr); //ROM[addr];
+  
+  //for (int b=7;b>=0;b--)
+  for (int b=0;b<7;b++)  
+  {
+   bit= ((aux>>b)&0x01);
+   
+   if (bit==1){ valorDeltaSigma++; } //DeltaSigma
+   else { valorDeltaSigma--; }   
+   
+   
+   
+   //DeltaSigma BEGIN
+   //aByte= (valor>0) ? valor: (-valor+127); //DeltaSigma   
+   //aByte= valor+64; //DeltaSigma
+   aByte= (valorDeltaSigma>0)? valorDeltaSigma : (255-valorDeltaSigma);
+   //DeltaSigma END
+   
+   //Modo bit ahorro BEGIN
+   //aByte= (bit==0)? 250: 10; //valor bit
+   //Modo bit ahorro END
+  
+   printf("0x%02X,",aByte);
+   //printf("(%d)%d,",bit,valorDeltaSigma); //DeltaSigma
+   cont16++;
+   if(cont16>31)
+   {
+    cont16=0;
+    printf("\n");
+   }
+  }
+
+  addr++;
+ }
+ 
+ printf("\nDump DMC END\n");
+ fflush(stdout);
+ */
+}
+
+//******************************************************************
+void jj_proc_dmc_len(unsigned char data)
+{
+ unsigned int longitud= ((unsigned int)(data)* 16)+1;
+ unsigned int auxResample= (gb_dmc_rate>SAMPLE_RATE)? gb_dmc_rate/SAMPLE_RATE : SAMPLE_RATE/gb_dmc_rate;
+//  printf("DMC len data:%d lon:%d SAMPLERATE:%d rate:%d resample:%d\n",data,longitud,SAMPLE_RATE,gb_dmc_rate,auxResample); fflush(stdout);
+ unsigned int addr= 0xC000+gb_dmc_addr;
+ unsigned int cont16=0;
+  
+ unsigned int contSample=0;
+ int valorDeltaSigma=0;
+  
+  
+  //DumpDMC(addr,longitud);
+  
+  unsigned char contPeque=0;
+  for (unsigned int i=0;i<longitud;i++)
+  {
+   unsigned char aux= K6502_Read(addr); //ROM[addr];
+   
+   //for (int b=7;b>=0;b--)
+   for (int b=0;b<7;b++)
+   {
+    unsigned char bit= ((aux>>b)&0x01);
+    //unsigned char signo= (bit==0)? 250: 10;
+    
+    if (bit==1){ valorDeltaSigma++; } //DeltaSigma
+    else { valorDeltaSigma--; }
+    
+    if (gb_dmc_rate>SAMPLE_RATE)
+    {
+      if (gb_use_dmc_deltaSigma==1)
+      {
+       gb_dmc_sample[contSample]= valorDeltaSigma; //Modo DeltaSigma
+      }      
+      else
+      {
+       gb_dmc_sample[contSample]= bit; //Ahorra 7 bits modo pulsos
+      }      
+            
+      contPeque++;
+      if (contPeque>2)
+      {
+        contSample++;
+        contPeque=0;
+      }        
+    }
+    else
+    {
+     for (unsigned int resa=0; resa<=(auxResample+0); resa++)
+     {
+      if (gb_use_dmc_deltaSigma==1)
+      {
+       gb_dmc_sample[contSample]= valorDeltaSigma; //Modo DeltaSigma
+      }
+      else
+      {
+       gb_dmc_sample[contSample]= bit; //Ahorra 7 bits modo pulsos
+      }
+          
+      contSample++;
+     }
+    }
+   }
+   addr++;
+  }
+  
+  //Resampleo
+  
+  
+  
+  gb_dmc_sample_len= contSample;
+  gb_dmc_sample_cur= 0;
+  //gbVolMixer_now[4]= 1; //activamos mixer No hace falta
+  gb_latch_vol_dmc=15; //gbVol_canal_now[4]= 15; //Ativamos canal Volumen //Antes era asi
+  
+  
+  /*
+  printf("\nSAMPLE BEGIN\n");    
+  for (unsigned int i=0;i<longitud;i++)
+  {
+   unsigned char aux= K6502_Read(addr); //ROM[addr];
+   //for (int b=6;b>=0;b--)
+   for (int b=0;b<7;b++)
+   {
+    unsigned char bit= ((aux>>b)&0x01);
+    unsigned char signo= (bit==0)? 250: 10; 
+    printf("0x%02X,",signo);
+   }   
+   //printf("0x%02X,",aux);
+      
+   cont16++;
+   if(cont16>2){ printf("\n"); cont16=0; }
+   //if(cont16>15){ printf("\n"); cont16=0; }
+   
+   addr++;
+  }
+  printf("\nSAMPLE END\n");
+  */
+  
+ // fflush(stdout);     
+}
+
+//******************************************************************
+void jj_proc_mix(unsigned char data)
+{//MIXER
+ #ifdef use_lib_debug_apu_memwrite
+  printf("MIXER:%02X\n",data);
+  fflush(stdout);
+ #endif 
+ //gbVolMixer_now[0]= ((data & 0x01) != 0x01) ? 0 : 1; //Antes era asi   
+ //gbVolMixer_now[1]= ((data & 0x02) != 0x02) ? 0 : 1; //Antes era asi 
+ //gbVolMixer_now[2]= ((data & 0x04) != 0x04) ? 0 : 1; //Antes era asi
+ //gbVolMixer_now[3]= ((data & 0x08) != 0x08) ? 0 : 1; //Antes era asi
+ //gbVolMixer_now[4]= ((data & 0x10) != 0x10) ? 0 : 1; //Antes era asi
+ //return RAM[address];
+ 
+// printf("MIX:%d%d%d%d%d",gbVolMixer_now[4],gbVolMixer_now[3],gbVolMixer_now[2],gbVolMixer_now[1],gbVolMixer_now[0]);  
+// printf (" l:%d f:%d\n",PPU_Scanline,gb_fps_cur);
+// fflush(stdout);
+
+
+ //LATCH
+ gb_latch_vol_mix[0]= ((data & 0x01) != 0x01) ? 0 : 1;     
+ gb_latch_vol_mix[1]= ((data & 0x02) != 0x02) ? 0 : 1; 
+ gb_latch_vol_mix[2]= ((data & 0x04) != 0x04) ? 0 : 1;
+ gb_latch_vol_mix[3]= ((data & 0x08) != 0x08) ? 0 : 1;
+ gb_latch_vol_mix[4]= ((data & 0x10) != 0x10) ? 0 : 1;
+}
+
+
+
 void jj_apu_memwrite(unsigned int address, unsigned char data)
 {
+
+ switch (address)
+ {
+  case 0x4000: jj_proc_canal_vol(0,data); break; //Dutty, loop, env, vol canal 0 cuadrado (canal 1) DDLC NNNN
+//  case 0x4001: printf("0x4001\n"); fflush(stdout); break;
+  case 0x4002: jj_proc_canal_freq(0,0,data); break; //freq low canal 0 (canal1)  TTTT TTTT
+  case 0x4003: jj_proc_canal_freq(0,1,data); break; //freq high canal 0 (canal1) LLLL LTTT 
+       
+  case 0x4004: jj_proc_canal_vol(1,data); break; //Dutty, loop, env, vol canal 1 cuadrado (canal 2) DDLC NNNN
+//  case 0x4005: printf("0x4005\n"); fflush(stdout); break;
+  case 0x4006: jj_proc_canal_freq(1,0,data); break; //freq low canal 1 (canal2)  TTTT TTTT
+  case 0x4007: jj_proc_canal_freq(1,1,data); break; //freq high canal 1 (canal2) LLLL LTTT 
+  
+  case 0x4008: jj_proc_triangle_vol(data); break;    //C---.----
+  case 0x400A: jj_proc_triangle_freq(0,data); break; //LLLL.LLLL
+  case 0x400B: jj_proc_triangle_freq(1,data); break; //llll.lHHH
+  
+  case 0x400C: jj_proc_noise_vol(data); break; //--LC VVVV --, loop, env, vol canal 2 (canal 3) ruido
+  case 0x400E: jj_proc_noise_freq(data); break; //L--- PPPP 	Loop noise (L), noise period (P) 
+  case 0x400F: break; //LLLL L--- 	Length counter load (L) 
+  
+  //case 0x4010: jj_proc_dmc_rate(data); break; //IL--.RRRR
+  //case 0x4011: jj_proc_dmc_load(data); break; //-DDD.DDDD
+  //case 0x4012: jj_proc_dmc_addr(data); break; //AAAA.AAAA
+  //case 0x4013: jj_proc_dmc_len(data); break; //LLLL.LLLL
+  
+  case 0x4015: jj_proc_mix(data); break;
+ }
+
+
+/*
+
  //if ((address>=0x4000)&&(address<=0x4015))
  //{
   //printf("SND:%08X d:%02X\n",address,data); fflush(stdout);
@@ -1375,7 +2006,8 @@ void jj_apu_memwrite(unsigned int address, unsigned char data)
  }        
   
 //  return RAM[address];  
- 
+ */
+
 }
 
 #endif

@@ -325,4 +325,6 @@ void InfoNES_SetupChr();
  void jj_snd_pop(void);
 #endif 
 
+void SDL_sonido_poll_play(void);
+
 #endif /* !InfoNES_H_INCLUDED */

@@ -95,7 +95,7 @@
 #endif
 
 
-unsigned char gb_use_video_mode_pal=1; //Modo 50 hz
+unsigned char gb_use_video_mode_pal=0; //Modo 50 hz
 
 #ifdef use_lib_log_serial
  unsigned char gb_use_debug=1;
@@ -189,6 +189,64 @@ unsigned char gb_setup_end=0;
   //unsigned int gb_cola_max_ch[480][3];
   unsigned int gb_vol_now[4]={0,0,0,0};
   unsigned int gb_max_ch_now[4]={0,0,0,0};
+
+  volatile unsigned int gbDutty_canal_now[4]={2,2,2,2};  //50 percent
+  volatile unsigned int gb_max_cont_pos_ch[4]={1,1,1,1};
+  volatile unsigned int gb_max_cont_neg_ch[4]={1,1,1,1};  
+  volatile unsigned int gb_triangle_inc_ch=0;
+  unsigned char gbRuidoEnv=0;
+  unsigned char gbPulso0Env=0;
+  unsigned char gbPulso1Env=0;   
+  volatile unsigned int gb_triangle_value=0;
+  volatile unsigned int gb_cont_triangulo=0;
+
+  unsigned char gb_use_Pulso0Env=1;
+  unsigned char gb_use_Pulso1Env=1;
+  unsigned char gb_use_RuidoEnv=1;
+  unsigned char gb_use_dmc_deltaSigma=0;
+
+  unsigned int gb_latch_vol_pulse[4];//2 canales pulso volumen
+  unsigned int gb_latch_vol_triangle;//1 canal triangulo volumen
+  unsigned char gb_latch_vol_mix[4];
+  //unsigned int gb_latch_vol_triangle;//1 canal triangulo volumen
+  unsigned int gb_latch_inc_triangle;
+  unsigned int gb_latch_freq_pulse[4];//2 canales pulso frecuencia
+  unsigned int gb_latch_pos_max_pulse[4];//2 canales pulso positivo
+  unsigned int gb_latch_neg_max_pulse[4];//2 canales pulso negativo  
+  unsigned int gb_latch_freq_triangle;//1 canal triangulo frecuencia
+  unsigned int gb_latch_max_triangle;//1 canal triangulo  
+
+  unsigned int gb_dmc_rate=0;
+  signed char gb_dmc_sample[8000];
+  volatile unsigned int gb_dmc_sample_len=0;
+  unsigned int gb_dmc_addr=0;
+  volatile unsigned int gb_dmc_sample_cur=0;  
+
+  unsigned int gb_cola_id1ms_write_cur=0;
+  unsigned int gb_cola_id1ms_read_cur=0;  
+  unsigned int gb_cola_vol_pulse[40][2];//2 canales pulso volumen
+  unsigned int gb_cola_vol_triangle[40];//1 canal triangulo volumen
+  unsigned int gb_cola_vol_noise[40];
+  unsigned int gb_cola_pos_max_noise[40];
+  unsigned int gb_cola_neg_max_noise[40];  
+  unsigned int gb_cola_pos_max[40][4]; //2 canales pulso positivo
+  unsigned int gb_cola_neg_max[40][4]; //2 canales pulso negativo  
+  unsigned int gb_cola_max_triangle[40]; //un canal triangulo
+  unsigned int gb_cola_inc_triangle[40];
+  unsigned int gb_latch_vol_noise; //1 canal ruido    
+  unsigned int gb_cola_vol_dmc[40];  
+  unsigned int gb_latch_vol_dmc;  
+  unsigned char gb_cola_vol_mixer[40][4];
+
+  unsigned char gb_aRand[16]={5,1,9,1,4,1,2,1,16,1,7,1,13,1,6,1}; //0 a 15
+  volatile unsigned char gb_contRand=0;
+  static unsigned int g_seed=0;  
+
+  inline unsigned int fast_rand()
+  {
+   g_seed = ((214013 * g_seed) + 2531011);
+   return (g_seed>>16)&0x7FFF;
+  }  
  #endif
 #endif 
 
@@ -437,7 +495,13 @@ void setup()
  Serial.printf("SPRRAM %d\r\n", ESP.getFreeHeap());
  PPU_ScanTable= (unsigned char *)malloc(263); //263
  Serial.printf("PPUScanTable %d\r\n", ESP.getFreeHeap());
- PalTable= (unsigned char *)malloc(32); //32
+ 
+ #ifdef use_lib_WorkFrame8
+  PalTable= (unsigned char *)malloc(32 * sizeof(unsigned char)); //32
+ #else
+  PalTable= (unsigned short int *)malloc(32*sizeof(short int)); //32
+ #endif
+ 
  Serial.printf("PalTable %d\r\n", ESP.getFreeHeap());
 
 
@@ -1624,6 +1688,8 @@ void SDL_audio_callback(void *user_data, Uint8 *raw_buffer, int bytes)
    //Para DAC   
    //int i0,i1,i2,i3,iSum;
    int iSum;
+   int vol;
+   unsigned int auxMax;
 
    if (gb_spk_data != gb_spk_data_before)
    {
@@ -1643,23 +1709,279 @@ void SDL_audio_callback(void *user_data, Uint8 *raw_buffer, int bytes)
 
    //Mezclador
    iSum= 0;
+
+   //Canal Cuadrado 0
+   gb_cur_cont_ch[0]++;
+   auxMax= (gb_flipflop_ch[0]==0) ? (gb_max_cont_pos_ch[0]): (gb_max_cont_neg_ch[0]);
+   if (gb_cur_cont_ch[0] >= auxMax)
+   {                          
+    gb_cur_cont_ch[0]=0;
+        
+    gb_flipflop_ch[0]++;
+    gb_flipflop_ch[0]= (gb_flipflop_ch[0] & 0x01);
+   }
+
+   //Canal Cuadrado 1
+   gb_cur_cont_ch[1]++;
+   auxMax= (gb_flipflop_ch[1]==0) ? (gb_max_cont_pos_ch[1]): (gb_max_cont_neg_ch[1]);
+   if (gb_cur_cont_ch[1] >= auxMax)
+   {                          
+    gb_cur_cont_ch[1]=0;
+        
+    gb_flipflop_ch[1]++;
+    gb_flipflop_ch[1]= (gb_flipflop_ch[1] & 0x01);
+   }
+
+   //Canal Triangulo 2
+   gb_cur_cont_ch[2]++;
+   auxMax= (gb_flipflop_ch[2]==0) ? (gb_max_cont_pos_ch[2]): (gb_max_cont_neg_ch[2]);
+   if (gb_cur_cont_ch[2] >= auxMax)
+   {                          
+    gb_cur_cont_ch[2]=0;
+        
+    gb_flipflop_ch[2]++;
+    gb_flipflop_ch[2]= (gb_flipflop_ch[2] & 0x01);
+
+    gb_triangle_value= (gb_flipflop_ch[2]==0) ? 15: 0;     
+    gb_cont_triangulo= 0;    
+   }
+   else
+   {
+    gb_cont_triangulo++;
+    if (gb_flipflop_ch[2]==1)
+    {      
+     if (gb_cont_triangulo>=gb_triangle_inc_ch)
+     {
+      if (gb_triangle_value<15)
+      {
+       gb_triangle_value++;
+      }
+      gb_cont_triangulo=0;
+     }
+    }
+    else
+    {     
+     if (gb_cont_triangulo>=gb_triangle_inc_ch)
+     {
+      if (gb_triangle_value>0)
+      {
+       gb_triangle_value--;
+      }
+      gb_cont_triangulo=0;
+     }
+    }
+   }  
+
+   //Ruido
+   gb_cur_cont_ch[3]++;
+   auxMax= (gb_flipflop_ch[3]==0) ? (gb_max_cont_pos_ch[3]): (gb_max_cont_neg_ch[3]);
+   if (gb_cur_cont_ch[3] >= auxMax)
+   {                          
+    gb_cur_cont_ch[3]=0;
+        
+    gb_flipflop_ch[3]++;
+    gb_flipflop_ch[3]= (gb_flipflop_ch[3] & 0x01);
+   }
+
+
+
+   //MIXER
+   //Cuadrado 0
+   if ((gbVolMixer_now[0]!=0) && (gbVol_canal_now[0]!=0))
+   {
+    vol= (int)(gbVol_canal_now[0]);
+    iSum+= (gb_flipflop_ch[0]==1)? vol<<3:-vol<<3;
+   }
+
+   //Cuadrado 1
+   if ((gbVolMixer_now[1]!=0) && (gbVol_canal_now[1]!=0))
+   {
+    vol= (int)(gbVol_canal_now[1]);
+    iSum+= (gb_flipflop_ch[1]==1)? vol<<3:-vol<<3;
+   }
+
+   //Triangulo
+   if ((gbVolMixer_now[2]!=0) && (gbVol_canal_now[2]!=0))
+   {
+    vol= (gb_triangle_value<8) ? ((int)(7-gb_triangle_value)): ((int)(gb_triangle_value-7));
+    iSum+= (gb_triangle_value<8) ? -vol<<2:vol<<2;
+   }
+
+   //Ruido
+   if ((gbVolMixer_now[3]!=0) && (gbVol_canal_now[3]!=0))
+   {
+    vol= (int)(gbVol_canal_now[3]) * ((gb_aRand[gb_contRand])+1); //De 1 a 14
+    gb_contRand++;
+    if (gb_contRand>15)
+    {
+     gb_contRand= gb_contRand + fast_rand() & 0x0F;
+     gb_contRand= (gb_contRand & 0x0F);
+    }
+    iSum+= (gb_flipflop_ch[3]==1)? vol>>2:-vol>>2; 
+   }   
+
+   //DMC
+   //Mezcla DMC  
+   /*
+   if ((gbVolMixer_now[4]!=0) && (gbVol_canal_now[4]!=0))  
+   {   
+    if (gb_use_dmc_deltaSigma==1)
+    {
+     vol= (int)gb_dmc_sample[gb_dmc_sample_cur] * (int)gbVol_canal_now[4];  
+     iSum+= vol<<1;
+    }
+    else
+    {
+     unsigned char bit= (unsigned char)gb_dmc_sample[gb_dmc_sample_cur];   
+     int vol= ((int)bit) * (int)gbVol_canal_now[4];
+     iSum+= (bit==0)? -vol<<4: vol<<4;       
+    }         
+   }
+   */
+
+
+
+
+
+   /*
    for (unsigned char ch=0;ch<4;ch++)
    {
     gb_cur_cont_ch[ch]++;
-    if (gb_cur_cont_ch[ch]>=(gb_max_cont_ch[ch]-1))
+
+    unsigned int auxMax= (gb_flipflop_ch[ch]==0) ? (gb_max_cont_pos_ch[ch]-0): (gb_max_cont_neg_ch[ch]-0);
+    if (auxMax>10000) 
     {
-     gb_cur_cont_ch[ch]=0;
+     auxMax=0;
+    }
+
+    //if (gb_cur_cont_ch[ch]>=(gb_max_cont_ch[ch]-1))
+    if (gb_cur_cont_ch[ch] >= auxMax)
+    {
+     gb_cur_cont_ch[ch]=0;     
      
      gb_flipflop_ch[ch]++;
      gb_flipflop_ch[ch]= (gb_flipflop_ch[ch] & 0x01);
+
+     if (ch==2)
+     {//Triangulo
+      gb_triangle_value= (gb_flipflop_ch[2]==0) ? 15: 0;     
+      gb_cont_triangulo= 0;
+     }     
+    }
+    else
+    {
+     if (ch==2)
+     {//Triangulo
+      gb_cont_triangulo++;
+      if (gb_flipflop_ch[2]==1)
+      {      
+       if (gb_cont_triangulo>=gb_triangle_inc_ch)
+       {
+        if (gb_triangle_value<15)
+        {
+         gb_triangle_value++;
+        }
+        gb_cont_triangulo=0;
+       }
+      }
+      else
+      {     
+       if (gb_cont_triangulo>=gb_triangle_inc_ch)
+       {
+        if (gb_triangle_value>0)
+        {
+         gb_triangle_value--;
+        }
+        gb_cont_triangulo=0;
+       }
+      }
+     }          
     }
 
-    if ((gbVolMixer_now[ch]!=0) && (gbVol_canal_now[ch]!=0))
-    {
-     iSum+= (gb_flipflop_ch[ch]==1)?32:-32;
-    }  
    }
 
+
+   iSum=0;
+   for (unsigned char ch=0;ch<4;ch++)
+   {
+    if (ch==3)
+    {//canal ruido
+     if ((gbVolMixer_now[3]!=0) && (gbVol_canal_now[3]!=0))
+     {    
+       
+      int vol= (int)(gbVol_canal_now[3]) * (1) * ((gb_aRand[gb_contRand])+1); //De 1 a 14
+      gb_contRand++;       
+     
+      if (gb_contRand>15)
+      {
+       gb_contRand= gb_contRand + fast_rand() & 0x0F;
+       gb_contRand= (gb_contRand & 0x0F);
+      }      
+
+      iSum+= (gb_flipflop_ch[3]==1)? vol:-vol;
+      
+     }
+    }
+    else
+    {
+     if (ch==2)
+     {//Triangulo
+      int vol= (gb_triangle_value<8) ? ((int)(7-gb_triangle_value) * 8): ((int)(gb_triangle_value-7) * 8);
+      iSum+= (gb_triangle_value<8) ? -vol:vol;    
+     }
+     else
+     {
+      if ((gbVolMixer_now[ch]!=0) && (gbVol_canal_now[ch]!=0))
+      {
+       //iSum+= (gb_flipflop_ch[ch]==1)?32:-32;
+     
+       int vol= (int)(gbVol_canal_now[ch])*8;
+       iSum+= (gb_flipflop_ch[ch]==1)? vol:-vol;
+      }
+     }  
+    }
+   }
+*/
+
+/*
+  if ((gbVolMixer_now[4]!=0) && (gbVol_canal_now[4]!=0))  
+  {   
+   if (gb_use_dmc_deltaSigma==1)
+   {
+    int vol= (int)gb_dmc_sample[gb_dmc_sample_cur] * (int)gbVol_canal_now[4] * 1;       
+    iSum+= vol;
+   }
+   else
+   {
+    unsigned char bit= (unsigned char)gb_dmc_sample[gb_dmc_sample_cur];   
+    int vol= ((int)bit) * (int)gbVol_canal_now[4] * 32;
+    iSum+= (bit==0)? -vol: vol;       
+   }   
+//Modo ahorro 7 bits BEGIN
+//     unsigned char bit= gb_dmc_sample[gb_dmc_sample_cur];   
+//   int vol= ((int)bit) * gbVol_canal_now[4] * 250;
+//   auxMix+= (bit==0)? -vol: vol;
+//Modo ahorro 7 bits END
+
+//Modo DelatSigma BEGIN
+//   if (bit==1){ gb_dmc_sigmaDelta_cur++; }
+//   else { gb_dmc_sigmaDelta_cur--; }
+//   int vol= gb_dmc_sigmaDelta_cur * (int)gbVol_canal_now[4] * 250;   
+//   int vol= (bit<127)? ((int)bit) * (int)gbVol_canal_now[4] * 16  : ((int)(255-bit)) * (int)gbVol_canal_now[4] * 16;
+//   auxMix+= vol;
+//  int vol= gb_dmc_sample[gb_dmc_sample_cur] * (int)gbVol_canal_now[4] * 16;   
+//  auxMix+= vol;
+//Modo DelatSigma END
+   //auxMix+= vol;
+
+   gb_dmc_sample_cur++;
+   if (gb_dmc_sample_cur>=gb_dmc_sample_len)
+   {
+    gb_dmc_sample_len=0;
+    gbVolMixer_now[4]= 0;    
+   }
+  }
+  */
 
 
    //iSum= i0+i1+i2+i3;
