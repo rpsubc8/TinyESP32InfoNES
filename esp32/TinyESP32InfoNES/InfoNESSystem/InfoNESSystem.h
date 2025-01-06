@@ -51,19 +51,19 @@ void *InfoNES_MemorySet( void *dest, int c, int count );
 void InfoNES_DebugPrint( char *pszMsg );
 
 /* Wait */
-void InfoNES_Wait();
+//void InfoNES_Wait();
 
 /* Sound Initialize */
-void InfoNES_SoundInit( void );
+//void InfoNES_SoundInit( void );
 
-/* Sound Open */
-int InfoNES_SoundOpen( int samples_per_sync, int sample_rate );
+//Sound Open
+//int InfoNES_SoundOpen( int samples_per_sync, int sample_rate );
 
-/* Sound Close */
-void InfoNES_SoundClose( void );
+//Sound Close
+//void InfoNES_SoundClose( void );
 
-/* Sound Output 5 Waves - 2 Pulse, 1 Triangle, 1 Noise, 1 DPCM */
-void InfoNES_SoundOutput(int samples, unsigned char *wave1, unsigned char *wave2, unsigned char *wave3, unsigned char *wave4, unsigned char *wave5);
+//Sound Output 5 Waves - 2 Pulse, 1 Triangle, 1 Noise, 1 DPCM
+//void InfoNES_SoundOutput(int samples, unsigned char *wave1, unsigned char *wave2, unsigned char *wave3, unsigned char *wave4, unsigned char *wave5);
 
 /* Print system message */
 void InfoNES_MessageBox( char *pszMsg, ... );

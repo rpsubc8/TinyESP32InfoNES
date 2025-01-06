@@ -47,6 +47,13 @@
  
  //Usa osciladores DAC directo
  #define use_lib_esp32_dac
+
+ //Seleccionar solo uno 
+ //#define use_lib_esp32_dac_8khz
+ //#define use_lib_esp32_dac_11khz
+ //#define use_lib_esp32_dac_16khz 
+ //#define use_lib_esp32_dac_22khz
+ #define use_lib_esp32_dac_44khz
  
  //Prueba fabgl (no usar)
  //#define use_lib_sound_fabgl

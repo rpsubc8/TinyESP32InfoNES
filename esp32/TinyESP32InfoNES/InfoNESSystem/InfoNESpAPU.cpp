@@ -110,20 +110,20 @@ unsigned int ApuCyclesPerSample;
 unsigned int ApuSampleRate;
 unsigned int ApuCycleRate;
 
-struct ApuQualityData_t 
-{
-  unsigned int pulse_magic;
-  unsigned int triangle_magic;
-  unsigned int noise_magic;
-  unsigned int samples_per_sync;
-  unsigned int cycles_per_sample;
-  unsigned int sample_rate;
-  unsigned int cycle_rate;
-} ApuQual[] = {
-  { 0xa2567000, 0xa2567000, 0xa2567000, 183, 164, 11025, 1062658 },
-  { 0x512b3800, 0x512b3800, 0x512b3800, 367,  82, 22050, 531329 },
-  { 0x289d9c00, 0x289d9c00, 0x289d9c00, 735,  41, 44100, 265664 },
-};
+//struct ApuQualityData_t 
+//{
+//  unsigned int pulse_magic;
+//  unsigned int triangle_magic;
+//  unsigned int noise_magic;
+//  unsigned int samples_per_sync;
+//  unsigned int cycles_per_sample;
+//  unsigned int sample_rate;
+//  unsigned int cycle_rate;
+//} ApuQual[] = {
+//  { 0xa2567000, 0xa2567000, 0xa2567000, 183, 164, 11025, 1062658 },
+//  { 0x512b3800, 0x512b3800, 0x512b3800, 367,  82, 22050, 531329 },
+//  { 0x289d9c00, 0x289d9c00, 0x289d9c00, 735,  41, 44100, 265664 },
+//};
 
 //-------------------------------------------------------------------
 //  Rectangle Wave #1 resources                                      
@@ -196,99 +196,99 @@ int   ApuC5DmaLength, ApuC5CacheDmaLength;
 //-------------------------------------------------------------------
 //  Wave Data                                                        
 //-------------------------------------------------------------------
-unsigned char pulse_25[0x20] = {
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-};
+//unsigned char pulse_25[0x20] = {
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//};
 
-unsigned char pulse_50[0x20] = {
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-};
+//unsigned char pulse_50[0x20] = {
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//};
 
-unsigned char pulse_75[0x20] = {
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-};
+//unsigned char pulse_75[0x20] = {
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x00, 0x00, 0x00, 0x00,
+//  0x00, 0x00, 0x00, 0x00,
+//};
 
-unsigned char pulse_87[0x20] = {
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x11, 0x11, 0x11, 0x11,
-  0x00, 0x00, 0x00, 0x00,
-};
+//unsigned char pulse_87[0x20] = {
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x11, 0x11, 0x11, 0x11,
+//  0x00, 0x00, 0x00, 0x00,
+//};
 
-unsigned char triangle_50[0x20] = {
-  0x00, 0x10, 0x20, 0x30,
-  0x40, 0x50, 0x60, 0x70,
-  0x80, 0x90, 0xa0, 0xb0,
-  0xc0, 0xd0, 0xe0, 0xf0,
-  0xff, 0xef, 0xdf, 0xcf,
-  0xbf, 0xaf, 0x9f, 0x8f,
-  0x7f, 0x6f, 0x5f, 0x4f,
-  0x3f, 0x2f, 0x1f, 0x0f,
-};
+//unsigned char triangle_50[0x20] = {
+//  0x00, 0x10, 0x20, 0x30,
+//  0x40, 0x50, 0x60, 0x70,
+//  0x80, 0x90, 0xa0, 0xb0,
+//  0xc0, 0xd0, 0xe0, 0xf0,
+//  0xff, 0xef, 0xdf, 0xcf,
+//  0xbf, 0xaf, 0x9f, 0x8f,
+//  0x7f, 0x6f, 0x5f, 0x4f,
+//  0x3f, 0x2f, 0x1f, 0x0f,
+//};
 
-unsigned char *pulse_waves[4] = {
-  pulse_87, pulse_75, pulse_50, pulse_25,
-};
+//unsigned char *pulse_waves[4] = {
+//  pulse_87, pulse_75, pulse_50, pulse_25,
+//};
 
 //-------------------------------------------------------------------
 //  Active Time Left Data                                            
 //-------------------------------------------------------------------
-unsigned char ApuAtl[0x20] = 
-{
-  5, 127, 10, 1, 19,  2, 40,  3, 80,  4, 30,  5, 7,  6, 13,  7,
-  6,   8, 12, 9, 24, 10, 48, 11, 96, 12, 36, 13, 8, 14, 16, 15,
-};
+//unsigned char ApuAtl[0x20] = 
+//{
+//  5, 127, 10, 1, 19,  2, 40,  3, 80,  4, 30,  5, 7,  6, 13,  7,
+//  6,   8, 12, 9, 24, 10, 48, 11, 96, 12, 36, 13, 8, 14, 16, 15,
+//};
 
 //-------------------------------------------------------------------
 // Frequency Limit of Rectangle Channels                             
 //-------------------------------------------------------------------
-unsigned short int ApuFreqLimit[8] = 
-{
-   0x3FF, 0x555, 0x666, 0x71C, 0x787, 0x7C1, 0x7E0, 0x7F0
-};
+//unsigned short int ApuFreqLimit[8] = 
+//{
+//   0x3FF, 0x555, 0x666, 0x71C, 0x787, 0x7C1, 0x7E0, 0x7F0
+//};
 
 //-------------------------------------------------------------------
 // Noise Frequency Lookup Table                                      
 //-------------------------------------------------------------------
-unsigned int ApuNoiseFreq[ 16 ] =
-{
-     4,    8,   16,   32,   64,   96,  128,  160,
-   202,  254,  380,  508,  762, 1016, 2034, 4068
-};
+//unsigned int ApuNoiseFreq[ 16 ] =
+//{
+//     4,    8,   16,   32,   64,   96,  128,  160,
+//   202,  254,  380,  508,  762, 1016, 2034, 4068
+//};
 
 //-------------------------------------------------------------------
 // DMC Transfer Clocks Table                                          
 //-------------------------------------------------------------------
-unsigned int ApuDpcmCycles[ 16 ] = 
-{
-  428, 380, 340, 320, 286, 254, 226, 214,
-  190, 160, 142, 128, 106,  85,  72,  54
-};
+//unsigned int ApuDpcmCycles[ 16 ] = 
+//{
+//  428, 380, 340, 320, 286, 254, 226, 214,
+//  190, 160, 142, 128, 106,  85,  72,  54
+//};
 
 //===================================================================
 //                                                                   
@@ -1128,13 +1128,13 @@ void InfoNES_pAPUInit(void)
 
   ApuQuality = pAPU_QUALITY - 1;            // 1: 22050, 2: 44100 [samples/sec]
 
-  ApuPulseMagic      = ApuQual[ ApuQuality ].pulse_magic;
-  ApuTriangleMagic   = ApuQual[ ApuQuality ].triangle_magic;
-  ApuNoiseMagic      = ApuQual[ ApuQuality ].noise_magic;
-  ApuSamplesPerSync  = ApuQual[ ApuQuality ].samples_per_sync;
-  ApuCyclesPerSample = ApuQual[ ApuQuality ].cycles_per_sample;
-  ApuSampleRate      = ApuQual[ ApuQuality ].sample_rate;
-  ApuCycleRate       = ApuQual[ ApuQuality ].cycle_rate;
+//  ApuPulseMagic      = ApuQual[ ApuQuality ].pulse_magic;
+//  ApuTriangleMagic   = ApuQual[ ApuQuality ].triangle_magic;
+//  ApuNoiseMagic      = ApuQual[ ApuQuality ].noise_magic;
+//  ApuSamplesPerSync  = ApuQual[ ApuQuality ].samples_per_sync;
+//  ApuCyclesPerSample = ApuQual[ ApuQuality ].cycles_per_sample;
+//  ApuSampleRate      = ApuQual[ ApuQuality ].sample_rate;
+//  ApuCycleRate       = ApuQual[ ApuQuality ].cycle_rate;
 	
   #ifdef use_lib_esp32_dac
   #else
@@ -1145,8 +1145,8 @@ void InfoNES_pAPUInit(void)
   // Initialize Rectangular, Noise Wave's Regs                         
   //-------------------------------------------------------------------
   ApuCtrl = ApuCtrlNew = 0;
-  ApuC1Wave = pulse_50;
-  ApuC2Wave = pulse_50;
+  //ApuC1Wave = pulse_50;
+  //ApuC2Wave = pulse_50;
 
   ApuC1a = ApuC1b = ApuC1c = ApuC1d = 0;
   ApuC2a = ApuC2b = ApuC2c = ApuC2d = 0;
@@ -1158,7 +1158,7 @@ void InfoNES_pAPUInit(void)
   ApuC1EnvVol = ApuC2EnvVol = ApuC4EnvVol = 0;
   ApuC1Atl = ApuC2Atl = ApuC4Atl = 0;
   ApuC1SweepPhase = ApuC2SweepPhase = 0;
-  ApuC1Freq = ApuC2Freq = ApuC4Freq = 0;
+  ApuC1Freq = ApuC2Freq = 0; //ApuC1Freq = ApuC2Freq = ApuC4Freq = 0;
   ApuC4Sr = ApuC4Fdc = 0;
 
   //-------------------------------------------------------------------
@@ -1197,10 +1197,10 @@ void InfoNES_pAPUInit(void)
 //                                                                   
 //===================================================================
 
-void InfoNES_pAPUDone(void)
-{
-  InfoNES_SoundClose();
-}
+//void InfoNES_pAPUDone(void)
+//{
+//  InfoNES_SoundClose();
+//}
 
  //End of InfoNES_pAPU.cpp
 

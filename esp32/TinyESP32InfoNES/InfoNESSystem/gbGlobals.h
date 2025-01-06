@@ -37,12 +37,7 @@
 
 
  
- #ifdef use_lib_esp32_dac
-  //extern unsigned int gb_cola_vol_mixer[480][3];
-  //extern unsigned int gb_cola_max_ch[480][3];
-  extern unsigned int gb_vol_now[4];
-  extern unsigned int gb_max_ch_now[4];
-  
+ #ifdef use_lib_esp32_dac  
   extern unsigned char gb_frec_canal1_low;
   extern unsigned char gb_frec_canal1_high;
   extern unsigned char gb_frec_canal2_low;
@@ -52,15 +47,36 @@
   extern unsigned char gb_frec_canal4_low;
   extern unsigned char gb_frec_canal4_high;   
   
-  extern volatile unsigned int gb_cur_cont_ch[4];  
-  extern volatile unsigned int gb_max_cont_ch[4];
-  extern volatile unsigned char gb_flipflop_ch[4];
+  extern volatile unsigned int gb_cur_cont_ch[5];  
+  extern volatile unsigned int gb_max_cont_ch[5];
+  extern volatile unsigned char gb_flipflop_ch[5];
   
-  extern volatile unsigned char gbVol_canal_now[4];
-  extern volatile unsigned char gbVolMixer_now[4];
+  extern volatile unsigned char gbVol_canal_now[5];
+  extern volatile unsigned char gbVolMixer_now[5];
   extern volatile unsigned int gbFrecMixer_now[4];
   
-  extern const int SAMPLE_RATE;
+  
+  #ifdef use_lib_esp32_dac_8khz
+   #define SAMPLE_RATE 8000
+  #else
+   #ifdef use_lib_esp32_dac_11khz
+    #define SAMPLE_RATE 11025
+   #else
+    #ifdef use_lib_esp32_dac_16khz
+     #define SAMPLE_RATE 16000
+    #else
+     #ifdef use_lib_esp32_dac_22khz
+      #define SAMPLE_RATE 22050
+     #else
+      #ifdef use_lib_esp32_dac_44khz
+       #define SAMPLE_RATE 44100
+      #else       
+      #endif
+     #endif
+    #endif            
+   #endif
+  #endif
+   
  #endif
  
  //InfoNES.h begin
@@ -214,7 +230,7 @@ extern void (*MapperRenderScreen)( unsigned char byMode );
  extern unsigned char  ApuC2Atl;   
  extern unsigned char  ApuC3a;
  extern unsigned char  ApuC3Atl;
- extern unsigned int ApuC3Llc;                             /* Linear Length Counter */
+ extern unsigned int ApuC3Llc;                             //Linear Length Counter
  extern unsigned char  ApuC4Atl;
  //InfoNESpAPU.h END
 
@@ -269,34 +285,33 @@ extern void (*MapperRenderScreen)( unsigned char byMode );
 
  extern unsigned int gb_latch_inc_triangle;//1 canal triangulo
  extern unsigned int gb_latch_vol_pulse[4];//2 canales pulso volumen 
- extern unsigned char gb_latch_vol_mix[4]; //4 canales de mezcla   
+ extern unsigned char gb_latch_vol_mix[5]; //4 canales de mezcla   
  extern unsigned int gb_latch_vol_triangle;//1 canal triangulo volumen
- extern unsigned int gb_latch_freq_pulse[4];//2 canales pulso frecuencia
  extern unsigned int gb_latch_pos_max_pulse[4];//2 canales pulso positivo
- extern unsigned int gb_latch_neg_max_pulse[4];//2 canales pulso negativo 
- extern unsigned int gb_latch_freq_triangle;//1 canal triangulo frecuencia
+ extern unsigned int gb_latch_neg_max_pulse[4];//2 canales pulso negativo  
  extern unsigned int gb_latch_max_triangle;//1 canal triangulo 
  extern unsigned int gb_dmc_rate;
- extern signed char gb_dmc_sample[8000];
+ #define max_gb_dmc_sample 9870
+ extern signed char gb_dmc_sample[max_gb_dmc_sample];
  extern volatile unsigned int gb_dmc_sample_len;
  extern unsigned int gb_dmc_addr;
  extern volatile unsigned int gb_dmc_sample_cur; 
+ extern unsigned char gb_dmc_instrument_id[3]; //3 bytes id para no cargar de nuevo    
 
- extern unsigned int gb_cola_id1ms_write_cur;
- extern unsigned int gb_cola_id1ms_read_cur;
- extern unsigned int gb_cola_vol_pulse[40][2];//2 canales pulso volumen
- extern unsigned int gb_cola_vol_triangle[40];//1 canal triangulo volumen
- extern unsigned int gb_cola_vol_noise[40];
- extern unsigned int gb_cola_pos_max_noise[40];
- extern unsigned int gb_cola_neg_max_noise[40]; 
- extern unsigned int gb_cola_pos_max[40][4]; //2 canales pulso positivo
- extern unsigned int gb_cola_neg_max[40][4]; //2 canales pulso negativo 
- extern unsigned int gb_cola_max_triangle[40]; //un canal triangulo
- extern unsigned int gb_cola_inc_triangle[40]; 
+
  extern unsigned int gb_latch_vol_noise; //1 canal ruido 
- extern unsigned int gb_cola_vol_dmc[40]; 
- extern unsigned int gb_latch_vol_dmc; 
- extern unsigned char gb_cola_vol_mixer[40][4]; 
+ extern unsigned int gb_latch_vol_dmc;
+
+
+
+ #ifdef use_lib_esp32_dac
+  //Especial
+  extern unsigned char gb_latch_loop_pulse[2];
+  extern unsigned char gb_latch_c_pulse[2];     
+  extern unsigned char gb_noise_force_begin;
+  extern unsigned char gb_square0_force_begin;
+  extern unsigned char gb_square1_force_begin;  
+ #endif
 
 #endif
 
